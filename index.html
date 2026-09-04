@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#315f3b"
+    >
+
+    <title>
+        Gestión de Productos Enológicos
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="styles.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     CABECERA
+     ===================================================== -->
+
+<header class="app-header">
+
+    <div class="header-content">
+
+        <div>
+
+            <h1>
+                Gestión de Productos Enológicos
+            </h1>
+
+            <p>
+                Control de stock, lotes, entradas y consumos
+            </p>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+<!-- =====================================================
+     NAVEGACIÓN
+     ===================================================== -->
+
+<nav class="main-nav">
+
+    <button
+        type="button"
+        class="nav-button active"
+        data-page="inicio"
+    >
+        Inicio
+    </button>
+
+    <button
+        type="button"
+        class="nav-button"
+        data-page="productos"
+    >
+        Productos
+    </button>
+
+    <button
+        type="button"
+        class="nav-button"
+        data-page="movimientos"
+    >
+        Movimientos
+    </button>
+
+    <button
+        type="button"
+        class="nav-button"
+        data-page="historial"
+    >
+        Historial
+    </button>
+
+</nav>
+
+
+<!-- =====================================================
+     CONTENEDOR PRINCIPAL
+     ===================================================== -->
+
+<main class="main-container">
+
+
+<!-- =====================================================
+     PÁGINA INICIO
+     ===================================================== -->
+
+<section
+    id="page-inicio"
+    class="page active"
+>
+
+    <div class="page-header">
+
+        <div>
+
+            <h2>
+                Resumen
+            </h2>
+
+            <p>
+                Estado general del almacén enológico
+            </p>
+
+        </div>
+
+        <button
+            type="button"
+            id="btn-inicio-nuevo-producto"
+            class="btn btn-primary"
+        >
+            + Nuevo producto
+        </button>
+
+    </div>
+
+
+    <!-- ESTADÍSTICAS -->
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+
+            <span>
+                Productos
+            </span>
+
+            <strong id="stat-productos">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <span>
+                Lotes
+            </span>
+
+            <strong id="stat-lotes">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <span>
+                Entradas
+            </span>
+
+            <strong id="stat-entradas">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <span>
+                Consumos
+            </span>
+
+            <strong id="stat-consumos">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="stat-card warning-card">
+
+            <span>
+                Stock bajo
+            </span>
+
+            <strong id="stat-stock-bajo">
+                0
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- AVISOS -->
+
+    <div class="content-card">
+
+        <div class="section-title">
+
+            <div>
+
+                <h3>
+                    Avisos de stock
+                </h3>
+
+                <p>
+                    Productos que necesitan reposición
+                </p>
+
+            </div>
+
+        </div>
+
+        <div id="avisos-stock">
+
+            <div class="empty-message">
+                No hay avisos.
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ÚLTIMOS MOVIMIENTOS -->
+
+    <div class="content-card">
+
+        <div class="section-title">
+
+            <div>
+
+                <h3>
+                    Últimos movimientos
+                </h3>
+
+                <p>
+                    Entradas y consumos recientes
+                </p>
+
+            </div>
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                data-go-page="movimientos"
+            >
+                Ver todos
+            </button>
+
+        </div>
+
+        <div
+            id="inicio-ultimos-movimientos"
+            class="table-container"
+        ></div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     PÁGINA PRODUCTOS
+     ===================================================== -->
+
+<section
+    id="page-productos"
+    class="page"
+>
+
+    <div class="page-header">
+
+        <div>
+
+            <h2>
+                Productos enológicos
+            </h2>
+
+            <p>
+                Productos, lotes y stock disponible
+            </p>
+
+        </div>
+
+        <button
+            type="button"
+            id="btn-nuevo-producto"
+            class="btn btn-primary"
+        >
+            + Nuevo producto
+        </button>
+
+    </div>
+
+
+    <!-- FILTROS -->
+
+    <div class="filters-card">
+
+        <div class="filter-group search-group">
+
+            <label for="buscar-productos">
+                Buscar
+            </label>
+
+            <input
+                type="search"
+                id="buscar-productos"
+                placeholder="Producto, proveedor, lote..."
+            >
+
+        </div>
+
+
+        <div class="filter-group">
+
+            <label for="filtro-clase">
+                Clase
+            </label>
+
+            <select id="filtro-clase">
+
+                <option value="">
+                    Todas las clases
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="filter-group">
+
+            <label for="filtro-stock">
+                Estado del stock
+            </label>
+
+            <select id="filtro-stock">
+
+                <option value="">
+                    Todos
+                </option>
+
+                <option value="ok">
+                    Stock correcto
+                </option>
+
+                <option value="bajo">
+                    Stock bajo
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="btn-limpiar-filtros"
+            class="btn btn-secondary"
+        >
+            Limpiar filtros
+        </button>
+
+    </div>
+
+
+    <!-- TABLAS -->
+
+    <div id="contenedor-tablas-productos"></div>
+
+</section>
+
+
+<!-- =====================================================
+     PÁGINA MOVIMIENTOS
+     ===================================================== -->
+
+<section
+    id="page-movimientos"
+    class="page"
+>
+
+    <div class="page-header">
+
+        <div>
+
+            <h2>
+                Movimientos
+            </h2>
+
+            <p>
+                Registra entradas de mercancía y consumos
+            </p>
+
+        </div>
+
+        <div class="header-actions">
+
+            <button
+                type="button"
+                id="btn-nueva-entrada"
+                class="btn btn-success"
+            >
+                + Entrada
+            </button>
+
+            <button
+                type="button"
+                id="btn-nuevo-consumo"
+                class="btn btn-danger"
+            >
+                − Consumo
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="content-card">
+
+        <div class="filters-card inner-filters">
+
+            <div class="filter-group search-group">
+
+                <label for="buscar-movimientos">
+                    Buscar
+                </label>
+
+                <input
+                    type="search"
+                    id="buscar-movimientos"
+                    placeholder="Producto, lote, observaciones..."
+                >
+
+            </div>
+
+
+            <div class="filter-group">
+
+                <label for="filtro-tipo-movimiento">
+                    Tipo
+                </label>
+
+                <select id="filtro-tipo-movimiento">
+
+                    <option value="">
+                        Todos
+                    </option>
+
+                    <option value="entrada">
+                        Entradas
+                    </option>
+
+                    <option value="consumo">
+                        Consumos
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="tabla-movimientos"
+            class="table-container"
+        ></div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     PÁGINA HISTORIAL
+     ===================================================== -->
+
+<section
+    id="page-historial"
+    class="page"
+>
+
+    <div class="page-header">
+
+        <div>
+
+            <h2>
+                Historial
+            </h2>
+
+            <p>
+                Consulta, edita o elimina movimientos registrados
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="content-card">
+
+        <div class="filters-card inner-filters">
+
+            <div class="filter-group search-group">
+
+                <label for="historial-busqueda">
+                    Buscar
+                </label>
+
+                <input
+                    type="search"
+                    id="historial-busqueda"
+                    placeholder="Buscar..."
+                >
+
+            </div>
+
+
+            <div class="filter-group">
+
+                <label for="historial-filtro-producto">
+                    Producto
+                </label>
+
+                <select id="historial-filtro-producto">
+
+                    <option value="">
+                        Todos los productos
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="filter-group">
+
+                <label for="historial-filtro-tipo">
+                    Tipo
+                </label>
+
+                <select id="historial-filtro-tipo">
+
+                    <option value="">
+                        Todos
+                    </option>
+
+                    <option value="entrada">
+                        Entradas
+                    </option>
+
+                    <option value="consumo">
+                        Consumos
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="tabla-historial"
+            class="table-container"
+        ></div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     ZONA DE COPIAS DE SEGURIDAD
+     ===================================================== -->
+
+<section class="backup-section">
+
+    <div class="backup-title">
+
+        <h3>
+            Copias de seguridad
+        </h3>
+
+        <p>
+            Guarda una copia de los datos para poder recuperarlos
+            posteriormente.
+        </p>
+
+    </div>
+
+
+    <div class="backup-buttons">
+
+        <button
+            type="button"
+            id="btn-exportar-json"
+            class="btn btn-secondary"
+        >
+            Exportar JSON
+        </button>
+
+
+        <button
+            type="button"
+            id="btn-importar-json"
+            class="btn btn-secondary"
+        >
+            Importar JSON
+        </button>
+
+
+        <input
+            type="file"
+            id="input-importar-json"
+            accept=".json,application/json"
+            hidden
+        >
+
+
+        <button
+            type="button"
+            id="btn-exportar-pdf"
+            class="btn btn-secondary"
+        >
+            Exportar PDF
+        </button>
+
+    </div>
+
+</section>
+
+
+</main>
+
+
+<!-- =====================================================
+     MODAL PRODUCTO
+     ===================================================== -->
+
+<div
+    id="modal-producto"
+    class="modal"
+>
+
+    <div class="modal-content modal-large">
+
+        <div class="modal-header">
+
+            <div>
+
+                <h2 id="modal-producto-titulo">
+                    Nuevo producto
+                </h2>
+
+                <p>
+                    Datos generales del producto y su primer lote
+                </p>
+
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                data-close-modal="modal-producto"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="form-producto">
+
+            <input
+                type="hidden"
+                id="producto-id"
+            >
+
+
+            <input
+                type="hidden"
+                id="producto-lote-id"
+            >
+
+
+            <div class="form-grid">
+
+
+                <div class="form-group full">
+
+                    <label for="producto-nombre">
+                        Nombre del producto *
+                    </label>
+
+                    <input
+                        type="text"
+                        id="producto-nombre"
+                        required
+                        placeholder="Ej.: Fermivin 4F"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="producto-proveedor">
+                        Proveedor *
+                    </label>
+
+                    <select
+                        id="producto-proveedor"
+                        required
+                    ></select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="producto-clase">
+                        Clase *
+                    </label>
+
+                    <select
+                        id="producto-clase"
+                        required
+                    ></select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="producto-unidad">
+                        Unidad de medida *
+                    </label>
+
+                    <select
+                        id="producto-unidad"
+                        required
+                    ></select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="producto-dosis">
+                        Dosis recomendada
+                    </label>
+
+                    <input
+                        type="text"
+                        id="producto-dosis"
+                        placeholder="Ej.: 20 g/hL"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="producto-lote">
+                        Lote *
+                    </label>
+
+                    <input
+                        type="text"
+                        id="producto-lote"
+                        required
+                        placeholder="Ej.: L2026-001"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="producto-cantidad">
+                        Cantidad inicial *
+                    </label>
+
+                    <input
+                        type="number"
+                        id="producto-cantidad"
+                        required
+                        min="0"
+                        step="any"
+                        inputmode="decimal"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="producto-stock-minimo">
+                        Aviso de stock bajo
+                    </label>
+
+                    <input
+                        type="number"
+                        id="producto-stock-minimo"
+                        min="0"
+                        step="any"
+                        value="0"
+                        inputmode="decimal"
+                    >
+
+                </div>
+
+
+                <div class="form-group full">
+
+                    <label for="producto-caracteristicas">
+                        Características
+                    </label>
+
+                    <textarea
+                        id="producto-caracteristicas"
+                        rows="4"
+                        placeholder="Descripción breve del producto..."
+                    ></textarea>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-close-modal="modal-producto"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Guardar producto
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL NUEVO LOTE
+     ===================================================== -->
+
+<div
+    id="modal-lote"
+    class="modal"
+>
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <div>
+
+                <h2>
+                    Nuevo lote
+                </h2>
+
+                <p>
+                    Añadir otro lote al producto
+                </p>
+
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                data-close-modal="modal-lote"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="form-lote">
+
+            <input
+                type="hidden"
+                id="lote-producto-id"
+            >
+
+
+            <div class="form-group">
+
+                <label for="nuevo-lote-nombre">
+                    Número de lote *
+                </label>
+
+                <input
+                    type="text"
+                    id="nuevo-lote-nombre"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="nuevo-lote-cantidad">
+                    Cantidad de entrada *
+                </label>
+
+                <input
+                    type="number"
+                    id="nuevo-lote-cantidad"
+                    required
+                    min="0"
+                    step="any"
+                    inputmode="decimal"
+                >
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-close-modal="modal-lote"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Guardar lote
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL MOVIMIENTO
+     ===================================================== -->
+
+<div
+    id="modal-movimiento"
+    class="modal"
+>
+
+    <div class="modal-content modal-large">
+
+        <div class="modal-header">
+
+            <div>
+
+                <h2 id="modal-movimiento-titulo">
+                    Nuevo movimiento
+                </h2>
+
+                <p id="modal-movimiento-descripcion">
+                    Registra una entrada o consumo.
+                </p>
+
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                data-close-modal="modal-movimiento"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="form-movimiento">
+
+            <input
+                type="hidden"
+                id="movimiento-id"
+            >
+
+
+            <input
+                type="hidden"
+                id="movimiento-tipo"
+            >
+
+
+            <div class="form-grid">
+
+
+                <div class="form-group">
+
+                    <label for="movimiento-producto">
+                        Producto *
+                    </label>
+
+                    <select
+                        id="movimiento-producto"
+                        required
+                    ></select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="movimiento-lote">
+                        Lote *
+                    </label>
+
+                    <select
+                        id="movimiento-lote"
+                        required
+                    ></select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="movimiento-cantidad">
+                        Cantidad *
+                    </label>
+
+                    <input
+                        type="number"
+                        id="movimiento-cantidad"
+                        required
+                        min="0.000001"
+                        step="any"
+                        inputmode="decimal"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="movimiento-fecha">
+                        Fecha *
+                    </label>
+
+                    <input
+                        type="date"
+                        id="movimiento-fecha"
+                        required
+                    >
+
+                </div>
+
+
+                <div
+                    id="movimiento-stock-info"
+                    class="stock-info full"
+                ></div>
+
+
+                <div class="form-group full">
+
+                    <label for="movimiento-observaciones">
+                        Observaciones
+                    </label>
+
+                    <textarea
+                        id="movimiento-observaciones"
+                        rows="4"
+                        placeholder="Proceso, depósito, elaboración, observaciones..."
+                    ></textarea>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-close-modal="modal-movimiento"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    id="btn-guardar-movimiento"
+                    class="btn btn-primary"
+                >
+                    Guardar movimiento
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     TOAST
+     ===================================================== -->
+
+<div
+    id="toast"
+    class="toast"
+></div>
+
+
+<!-- =====================================================
+     JAVASCRIPT
+     ===================================================== -->
+
+<script src="script.js"></script>
+
+</body>
+
+</html>
