@@ -3065,7 +3065,7 @@ function renderGrupoProductos(
                                 </th>
 
                                 <th>
-                                    Dosis
+                                    Dosis <br> (g/hL)
                                 </th>
 
                                 <th>
@@ -3081,15 +3081,15 @@ function renderGrupoProductos(
                                 </th>
 
                                 <th>
-                                    Entradas
+                                    Entradas (Kg)
                                 </th>
 
                                 <th>
-                                    Consumos
+                                    Consumos (Kg)
                                 </th>
 
                                 <th>
-                                    Stock
+                                    Stock (Kg)
                                 </th>
 
                                 <th>
