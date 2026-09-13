@@ -1845,3 +1845,41 @@ label textarea {
   }
 
 }
+
+/* =========================================
+   COLORES BOTONES PRINCIPALES
+========================================= */
+
+/* Exportar JSON */
+#btnExportJSON {
+    background: #2878a8;
+    color: white;
+    border-color: #2878a8;
+}
+
+#btnExportJSON:hover {
+    background: #1f638c;
+}
+
+/* Exportar PDF */
+#btnExportPDF {
+    background: #b44a4a;
+    color: white;
+    border-color: #b44a4a;
+}
+
+#btnExportPDF:hover {
+    background: #943939;
+}
+
+
+/* Botón Volver */
+[data-action="back"] {
+    background: #6f6870;
+    color: white;
+    border-color: #6f6870;
+}
+
+[data-action="back"]:hover {
+    background: #514c52;
+}
