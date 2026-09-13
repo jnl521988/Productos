@@ -1,21 +1,17 @@
+// ============================================================
+// GESTOR DE STOCK ENOLÓGICO
+// script.js
+// ============================================================
+
 "use strict";
 
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
 
-/* =========================================================
-   GESTIÓN DE PRODUCTOS ENOLÓGICOS
-   ========================================================= */
-
-
-/* =========================================================
-   CONFIGURACIÓN
-   ========================================================= */
-
-const STORAGE_KEY =
-    "gestion_productos_enologicos_v1";
-
+const STORAGE_KEY = "stock_enologico_reestructurado_v1";
 
 const PROVEEDORES = [
-
     "VIDEYNOL",
     "ENOLVIZ",
     "SYS",
@@ -23,28 +19,22 @@ const PROVEEDORES = [
     "LAMOTHE",
     "FUSIÓN VINICAS",
     "CECOGA"
-
 ];
-
 
 const CLASES = [
-
-    "Levadura",
-    "Nutrición",
-    "Encima",
-    "Chips fermentación",
-    "Duelas",
-    "Tanino",
-    "Clarificante",
-    "Conservante",
-    "Regulador",
-    "Otros"
-
+    "levadura",
+    "nutrición",
+    "encima",
+    "chips fermentación",
+    "duelas",
+    "tanino",
+    "clarificante",
+    "conservante",
+    "regulador",
+    "otros"
 ];
 
-
 const UNIDADES = [
-
     "mg",
     "g",
     "Kg",
@@ -58,61 +48,630 @@ const UNIDADES = [
     "ml/L",
     "ml/hL",
     "mg/L"
-
 ];
 
 
-/* =========================================================
-   DATOS
-   ========================================================= */
+// ============================================================
+// VARIABLES GLOBALES
+// ============================================================
 
-let datos = {
+let datos = cargarDatos();
 
-    productos: [],
+let claseActual = CLASES[0];
 
-    movimientos: []
-
-};
+let busqueda = "";
 
 
-let ultimoMovimientoEliminado = null;
+// ============================================================
+// FUNCIONES AUXILIARES
+// ============================================================
+
+function $(id) {
+    return document.getElementById(id);
+}
 
 
-/* =========================================================
-   INICIO
-   ========================================================= */
+function uid(prefijo) {
 
-document.addEventListener(
-    "DOMContentLoaded",
-    iniciarPrograma
-);
+    return (
+        prefijo +
+        "_" +
+        Date.now().toString(36) +
+        "_" +
+        Math.random().toString(36).slice(2, 8)
+    );
+}
 
 
-/* =========================================================
-   INICIAR PROGRAMA
-   ========================================================= */
+function numero(valor) {
 
-function iniciarPrograma() {
+    const n = Number(valor);
+
+    return Number.isFinite(n) ? n : 0;
+}
+
+
+function formatoNumero(valor) {
+
+    return numero(valor).toLocaleString("es-ES", {
+        maximumFractionDigits: 3
+    });
+}
+
+
+function hoy() {
+
+    return new Date().toISOString().slice(0, 10);
+}
+
+
+function escapar(valor) {
+
+    return String(valor ?? "").replace(
+        /[&<>"']/g,
+        function (caracter) {
+
+            const mapa = {
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            };
+
+            return mapa[caracter];
+        }
+    );
+}
+
+
+function capitalizar(texto) {
+
+    if (!texto) return "";
+
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+
+function toast(mensaje) {
+
+    const elemento = $("toast");
+
+    if (!elemento) return;
+
+    elemento.textContent = mensaje;
+
+    elemento.classList.add("show");
+
+    clearTimeout(window._toastTimer);
+
+    window._toastTimer = setTimeout(function () {
+
+        elemento.classList.remove("show");
+
+    }, 2300);
+}
+
+
+// ============================================================
+// ESTRUCTURA INICIAL
+// ============================================================
+
+function estructuraVacia() {
+
+    return {
+
+        version: 1,
+
+        productos: [],
+
+        movimientos: []
+
+    };
+}
+
+
+// ============================================================
+// CARGAR DATOS
+// ============================================================
+
+function cargarDatos() {
 
     try {
 
-        cargarDatos();
+        const raw = localStorage.getItem(STORAGE_KEY);
 
-        rellenarSelects();
+        if (!raw) {
 
-        instalarEventos();
+            return estructuraVacia();
 
-        actualizarTodo();
+        }
 
-        mostrarPagina("inicio");
+        const datosCargados = JSON.parse(raw);
 
-        console.log(
-            "Programa iniciado correctamente."
+        if (
+            !datosCargados ||
+            !Array.isArray(datosCargados.productos) ||
+            !Array.isArray(datosCargados.movimientos)
+        ) {
+
+            console.warn(
+                "Estructura de datos no válida. Se iniciará un almacén vacío."
+            );
+
+            return estructuraVacia();
+
+        }
+
+
+        datosCargados.productos.forEach(function (producto) {
+
+            producto.id = producto.id || uid("p");
+
+            producto.nombre = String(producto.nombre || "");
+
+            producto.proveedor = producto.proveedor || "VIDEYNOL";
+
+            producto.clase = producto.clase || "otros";
+
+            producto.unidad = producto.unidad || "Kg";
+
+            producto.dosis = producto.dosis || "";
+
+            producto.bajoStock = numero(producto.bajoStock);
+
+            producto.caracteristicas =
+                producto.caracteristicas || "";
+
+
+            if (!Array.isArray(producto.lotes)) {
+
+                producto.lotes = [];
+
+            }
+
+
+            producto.lotes.forEach(function (lote) {
+
+                lote.id = lote.id || uid("l");
+
+                lote.nombre =
+                    String(
+                        lote.nombre ??
+                        lote.lote ??
+                        "Sin lote"
+                    );
+
+                lote.cantidadInicial =
+                    numero(lote.cantidadInicial);
+
+            });
+
+        });
+
+
+        datosCargados.movimientos =
+            datosCargados.movimientos.filter(Boolean);
+
+
+        datosCargados.movimientos.forEach(function (movimiento) {
+
+            movimiento.id =
+                movimiento.id || uid("m");
+
+            movimiento.cantidad =
+                numero(movimiento.cantidad);
+
+            movimiento.tipo =
+                movimiento.tipo === "entrada"
+                    ? "entrada"
+                    : "consumo";
+
+            movimiento.fecha =
+                movimiento.fecha || hoy();
+
+            movimiento.descripcion =
+                movimiento.descripcion || "";
+
+        });
+
+
+        return datosCargados;
+
+    } catch (error) {
+
+        console.error(
+            "Error cargando los datos:",
+            error
+        );
+
+        return estructuraVacia();
+
+    }
+}
+
+
+// ============================================================
+// GUARDAR
+// ============================================================
+
+function guardar() {
+
+    try {
+
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(datos)
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error guardando datos:",
+            error
+        );
+
+        alert(
+            "No se pudieron guardar los datos en el navegador."
         );
 
     }
+}
 
-    catch (error) {
+
+// ============================================================
+// BUSCAR PRODUCTO
+// ============================================================
+
+function producto(id) {
+
+    return datos.productos.find(function (p) {
+
+        return p.id === id;
+
+    });
+}
+
+
+// ============================================================
+// BUSCAR LOTE
+// ============================================================
+
+function lote(productoId, loteId) {
+
+    const p = producto(productoId);
+
+    if (!p) return null;
+
+    return p.lotes.find(function (l) {
+
+        return l.id === loteId;
+
+    });
+}
+
+
+// ============================================================
+// MOVIMIENTOS DE UN LOTE
+// ============================================================
+
+function movimientosLote(productoId, loteId) {
+
+    return datos.movimientos.filter(function (movimiento) {
+
+        return (
+            movimiento.productoId === productoId &&
+            movimiento.loteId === loteId
+        );
+
+    });
+
+}
+
+
+// ============================================================
+// STOCK DE UN LOTE
+// ============================================================
+
+function stockLote(productoId, loteId) {
+
+    const l = lote(productoId, loteId);
+
+    if (!l) return 0;
+
+
+    let stock = numero(l.cantidadInicial);
+
+
+    const movimientos =
+        movimientosLote(productoId, loteId);
+
+
+    movimientos.forEach(function (movimiento) {
+
+        if (movimiento.tipo === "entrada") {
+
+            stock += numero(movimiento.cantidad);
+
+        } else {
+
+            stock -= numero(movimiento.cantidad);
+
+        }
+
+    });
+
+
+    return stock;
+}
+
+
+// ============================================================
+// STOCK DE PRODUCTO
+// ============================================================
+
+function stockProducto(productoObj) {
+
+    if (!productoObj) return 0;
+
+
+    return productoObj.lotes.reduce(
+        function (total, l) {
+
+            return (
+                total +
+                stockLote(
+                    productoObj.id,
+                    l.id
+                )
+            );
+
+        },
+        0
+    );
+}
+
+
+// ============================================================
+// CONSUMO DE UN LOTE
+// ============================================================
+
+function consumoLote(productoId, loteId) {
+
+    return movimientosLote(
+        productoId,
+        loteId
+    ).reduce(
+        function (total, movimiento) {
+
+            if (movimiento.tipo === "consumo") {
+
+                return total + numero(movimiento.cantidad);
+
+            }
+
+            return total;
+
+        },
+        0
+    );
+}
+
+
+// ============================================================
+// ENTRADAS DE UN LOTE
+// ============================================================
+
+function entradasLote(productoId, loteId) {
+
+    return movimientosLote(
+        productoId,
+        loteId
+    ).reduce(
+        function (total, movimiento) {
+
+            if (movimiento.tipo === "entrada") {
+
+                return total + numero(movimiento.cantidad);
+
+            }
+
+            return total;
+
+        },
+        0
+    );
+}
+
+
+// ============================================================
+// CONSUMO DE PRODUCTO
+// ============================================================
+
+function consumoProducto(productoObj) {
+
+    if (!productoObj) return 0;
+
+
+    return productoObj.lotes.reduce(
+        function (total, l) {
+
+            return (
+                total +
+                consumoLote(
+                    productoObj.id,
+                    l.id
+                )
+            );
+
+        },
+        0
+    );
+}
+
+
+// ============================================================
+// ENTRADAS DE PRODUCTO
+// ============================================================
+
+function entradasProducto(productoObj) {
+
+    if (!productoObj) return 0;
+
+
+    return productoObj.lotes.reduce(
+        function (total, l) {
+
+            return (
+                total +
+                entradasLote(
+                    productoObj.id,
+                    l.id
+                )
+            );
+
+        },
+        0
+    );
+}
+
+
+// ============================================================
+// INICIAR PROGRAMA
+// ============================================================
+
+function init() {
+
+    try {
+
+        llenarSelects();
+
+        renderNav();
+
+        renderClase();
+
+
+        // BUSCADOR
+
+        const search = $("searchInput");
+
+        if (search) {
+
+            search.addEventListener(
+                "input",
+                function (evento) {
+
+                    busqueda =
+                        evento.target.value
+                            .toLowerCase()
+                            .trim();
+
+                    renderClase();
+
+                }
+            );
+
+        }
+
+
+        // NUEVO PRODUCTO
+
+        if ($("btnNuevoProducto")) {
+
+            $("btnNuevoProducto").onclick =
+                function () {
+
+                    abrirProducto();
+
+                };
+
+        }
+
+
+        // EXPORTAR JSON
+
+        if ($("btnExportJSON")) {
+
+            $("btnExportJSON").onclick =
+                exportJSON;
+
+        }
+
+
+        // IMPORTAR JSON
+
+        if ($("inputImportJSON")) {
+
+            $("inputImportJSON").onchange =
+                importJSON;
+
+        }
+
+
+        // EXPORTAR PDF
+
+        if ($("btnExportPDF")) {
+
+            $("btnExportPDF").onclick =
+                exportPDF;
+
+        }
+
+
+        // LIMPIAR HISTORIAL
+
+        if ($("btnClearHistory")) {
+
+            $("btnClearHistory").onclick =
+                limpiarHistorial;
+
+        }
+
+
+        // FORMULARIOS
+
+        if ($("productForm")) {
+
+            $("productForm").onsubmit =
+                guardarProducto;
+
+        }
+
+
+        if ($("lotForm")) {
+
+            $("lotForm").onsubmit =
+                guardarLote;
+
+        }
+
+
+        if ($("movementForm")) {
+
+            $("movementForm").onsubmit =
+                guardarMovimiento;
+
+        }
+
+
+        // CLICS GENERALES
+
+        document.addEventListener(
+            "click",
+            manejarClick
+        );
+
+
+        // BOTONES DE CIERRE
+
+        prepararCierres();
+
+
+        console.log(
+            "Gestor de stock enológico iniciado correctamente."
+        );
+
+    } catch (error) {
 
         console.error(
             "ERROR AL INICIAR EL PROGRAMA:",
@@ -123,3441 +682,234 @@ function iniciarPrograma() {
             "Se ha producido un error al iniciar el programa.\n\n" +
             error.message
         );
-    }
-}
-
-
-/* =========================================================
-   CARGAR DATOS
-   ========================================================= */
-
-function cargarDatos() {
-
-    const guardado =
-        localStorage.getItem(
-            STORAGE_KEY
-        );
-
-
-    if (!guardado) {
-
-        datos = {
-
-            productos: [],
-
-            movimientos: []
-
-        };
-
-        return;
-    }
-
-
-    try {
-
-        const recuperado =
-            JSON.parse(
-                guardado
-            );
-
-
-        datos = normalizarDatos(
-            recuperado
-        );
 
     }
 
-    catch (error) {
-
-        console.error(
-            "Error leyendo localStorage:",
-            error
-        );
-
-
-        datos = {
-
-            productos: [],
-
-            movimientos: []
-
-        };
-
-
-        alert(
-            "Los datos guardados no se han podido leer. " +
-            "Se ha iniciado el programa vacío."
-        );
-    }
 }
 
 
-/* =========================================================
-   NORMALIZAR DATOS
-   ========================================================= */
-
-function normalizarDatos(
-    entrada
-) {
-
-    const resultado = {
-
-        productos: [],
-
-        movimientos: []
-
-    };
-
-
-    if (
-        entrada &&
-        Array.isArray(
-            entrada.productos
-        )
-    ) {
-
-        resultado.productos =
-            entrada.productos.map(
-                producto => {
-
-                    const nuevo = {
-
-                        id:
-                            producto.id ||
-                            generarId(),
-
-                        nombre:
-                            String(
-                                producto.nombre ||
-                                ""
-                            ),
-
-                        proveedor:
-                            String(
-                                producto.proveedor ||
-                                ""
-                            ),
-
-                        clase:
-                            String(
-                                producto.clase ||
-                                "Otros"
-                            ),
-
-                        unidad:
-                            String(
-                                producto.unidad ||
-                                ""
-                            ),
-
-                        dosis:
-                            String(
-                                producto.dosis ||
-                                ""
-                            ),
-
-                        caracteristicas:
-                            String(
-                                producto.caracteristicas ||
-                                ""
-                            ),
-
-                        stockMinimo:
-                            numeroSeguro(
-                                producto.stockMinimo
-                            ),
-
-                        lotes: []
-
-                    };
-
-
-                    if (
-                        Array.isArray(
-                            producto.lotes
-                        )
-                    ) {
-
-                        nuevo.lotes =
-                            producto.lotes.map(
-                                lote => ({
-
-                                    id:
-                                        lote.id ||
-                                        generarId(),
-
-                                    nombre:
-                                        String(
-                                            lote.nombre ||
-                                            lote.lote ||
-                                            ""
-                                        ),
-
-                                    cantidadInicial:
-                                        numeroSeguro(
-                                            lote.cantidadInicial
-                                        )
-
-                                })
-                            );
-                    }
-
-
-                    /*
-                       Compatibilidad por si hubiera
-                       algún producto sin lotes.
-                    */
-
-                    if (
-                        nuevo.lotes.length === 0
-                    ) {
-
-                        nuevo.lotes.push({
-
-                            id:
-                                generarId(),
-
-                            nombre:
-                                "SIN LOTE",
-
-                            cantidadInicial:
-                                0
-
-                        });
-                    }
-
-
-                    return nuevo;
-
-                }
-            );
-    }
-
-
-    if (
-        entrada &&
-        Array.isArray(
-            entrada.movimientos
-        )
-    ) {
-
-        resultado.movimientos =
-            entrada.movimientos.map(
-                movimiento => ({
-
-                    id:
-                        movimiento.id ||
-                        generarId(),
-
-                    tipo:
-                        movimiento.tipo ===
-                        "consumo"
-                            ? "consumo"
-                            : "entrada",
-
-                    productoId:
-                        movimiento.productoId ||
-                        "",
-
-                    loteId:
-                        movimiento.loteId ||
-                        "",
-
-                    cantidad:
-                        numeroSeguro(
-                            movimiento.cantidad
-                        ),
-
-                    fecha:
-                        movimiento.fecha ||
-                        fechaHoy(),
-
-                    observaciones:
-                        String(
-                            movimiento.observaciones ||
-                            ""
-                        ),
-
-                    creado:
-                        movimiento.creado ||
-                        new Date().toISOString()
-
-                })
-            );
-    }
-
-
-    return resultado;
-}
-
-
-/* =========================================================
-   GUARDAR DATOS
-   ========================================================= */
-
-function guardarDatos() {
-
-    localStorage.setItem(
-
-        STORAGE_KEY,
-
-        JSON.stringify(
-            datos
-        )
-
-    );
-}
-
-
-/* =========================================================
-   ID
-   ========================================================= */
-
-function generarId() {
-
-    return (
-
-        Date.now().toString(36) +
-
-        "-" +
-
-        Math.random()
-            .toString(36)
-            .substring(2, 10)
-
-    );
-}
-
-
-/* =========================================================
-   NÚMERO SEGURO
-   ========================================================= */
-
-function numeroSeguro(
-    valor
-) {
-
-    const numero =
-        Number(
-            valor
-        );
-
-
-    if (
-        !Number.isFinite(
-            numero
-        )
-    ) {
-
-        return 0;
-    }
-
-
-    return numero;
-}
-
-
-/* =========================================================
-   FORMATO NÚMERO
-   ========================================================= */
-
-function formatearNumero(
-    numero
-) {
-
-    return numeroSeguro(
-        numero
-    ).toLocaleString(
-        "es-ES",
-        {
-            maximumFractionDigits: 4
-        }
-    );
-}
-
-
-/* =========================================================
-   FECHA
-   ========================================================= */
-
-function fechaHoy() {
-
-    const ahora =
-        new Date();
-
-
-    const año =
-        ahora.getFullYear();
-
-
-    const mes =
-        String(
-            ahora.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        );
-
-
-    const dia =
-        String(
-            ahora.getDate()
-        ).padStart(
-            2,
-            "0"
-        );
-
-
-    return (
-        año +
-        "-" +
-        mes +
-        "-" +
-        dia
-    );
-}
-
-
-/* =========================================================
-   FORMATEAR FECHA
-   ========================================================= */
-
-function formatearFecha(
-    fecha
-) {
-
-    if (!fecha) {
-
-        return "—";
-    }
-
-
-    const partes =
-        String(
-            fecha
-        ).split(
-            "-"
-        );
-
-
-    if (
-        partes.length !== 3
-    ) {
-
-        return fecha;
-    }
-
-
-    return (
-        partes[2] +
-        "/" +
-        partes[1] +
-        "/" +
-        partes[0]
-    );
-}
-
-
-/* =========================================================
-   ESCAPAR HTML
-   ========================================================= */
-
-function escaparHTML(
-    texto
-) {
-
-    return String(
-        texto ?? ""
-    )
-    .replaceAll(
-        "&",
-        "&amp;"
-    )
-    .replaceAll(
-        "<",
-        "&lt;"
-    )
-    .replaceAll(
-        ">",
-        "&gt;"
-    )
-    .replaceAll(
-        '"',
-        "&quot;"
-    )
-    .replaceAll(
-        "'",
-        "&#039;"
-    );
-}
-
-
-/* =========================================================
-   NORMALIZAR TEXTO
-   ========================================================= */
-
-function normalizarTexto(
-    texto
-) {
-
-    return String(
-        texto ?? ""
-    )
-    .toLowerCase()
-    .normalize(
-        "NFD"
-    )
-    .replace(
-        /[\u0300-\u036f]/g,
-        ""
-    )
-    .trim();
-}
-
-
-/* =========================================================
-   OBTENER PRODUCTO
-   ========================================================= */
-
-function obtenerProducto(
-    id
-) {
-
-    return datos.productos.find(
-        producto =>
-            producto.id === id
-    );
-}
-
-
-/* =========================================================
-   OBTENER LOTE
-   ========================================================= */
-
-function obtenerLote(
-    productoId,
-    loteId
-) {
-
-    const producto =
-        obtenerProducto(
-            productoId
-        );
-
-
-    if (!producto) {
-
-        return null;
-    }
-
-
-    return producto.lotes.find(
-        lote =>
-            lote.id === loteId
-    ) || null;
-}
-
-
-/* =========================================================
-   STOCK DE UN LOTE
-   ========================================================= */
-
-function calcularStockLote(
-    productoId,
-    loteId
-) {
-
-    const lote =
-        obtenerLote(
-            productoId,
-            loteId
-        );
-
-
-    if (!lote) {
-
-        return 0;
-    }
-
-
-    let stock =
-        numeroSeguro(
-            lote.cantidadInicial
-        );
-
-
-    datos.movimientos.forEach(
-        movimiento => {
-
-            if (
-                movimiento.productoId !==
-                productoId
-            ) {
-
-                return;
-            }
-
-
-            if (
-                movimiento.loteId !==
-                loteId
-            ) {
-
-                return;
-            }
-
-
-            const cantidad =
-                numeroSeguro(
-                    movimiento.cantidad
-                );
-
-
-            if (
-                movimiento.tipo ===
-                "entrada"
-            ) {
-
-                stock +=
-                    cantidad;
-
-            }
-
-            else if (
-                movimiento.tipo ===
-                "consumo"
-            ) {
-
-                stock -=
-                    cantidad;
-            }
-
-        }
-    );
-
-
-    return Math.max(
-        0,
-        stock
-    );
-}
-
-
-/* =========================================================
-   STOCK TOTAL PRODUCTO
-   ========================================================= */
-
-function calcularStockProducto(
-    productoId
-) {
-
-    const producto =
-        obtenerProducto(
-            productoId
-        );
-
-
-    if (!producto) {
-
-        return 0;
-    }
-
-
-    return producto.lotes.reduce(
-        (
-            total,
-            lote
-        ) => {
-
-            return (
-                total +
-                calcularStockLote(
-                    productoId,
-                    lote.id
-                )
-            );
-
-        },
-        0
-    );
-}
-
-
-/* =========================================================
-   ENTRADAS PRODUCTO
-   ========================================================= */
-
-function calcularEntradasProducto(
-    productoId
-) {
-
-    return datos.movimientos
-        .filter(
-            movimiento =>
-                movimiento.productoId ===
-                productoId &&
-                movimiento.tipo ===
-                "entrada"
-        )
-        .reduce(
-            (
-                total,
-                movimiento
-            ) => {
-
-                return (
-                    total +
-                    numeroSeguro(
-                        movimiento.cantidad
-                    )
-                );
-
-            },
-            0
-        );
-}
-
-
-/* =========================================================
-   CONSUMOS PRODUCTO
-   ========================================================= */
-
-function calcularConsumosProducto(
-    productoId
-) {
-
-    return datos.movimientos
-        .filter(
-            movimiento =>
-                movimiento.productoId ===
-                productoId &&
-                movimiento.tipo ===
-                "consumo"
-        )
-        .reduce(
-            (
-                total,
-                movimiento
-            ) => {
-
-                return (
-                    total +
-                    numeroSeguro(
-                        movimiento.cantidad
-                    )
-                );
-
-            },
-            0
-        );
-}
-
-
-/* =========================================================
-   RELLENAR SELECTS
-   ========================================================= */
-
-function rellenarSelects() {
+// ============================================================
+// RELLENAR SELECTS
+// ============================================================
+
+function llenarSelects() {
 
     const proveedor =
-        document.getElementById(
-            "producto-proveedor"
-        );
-
+        $("fProveedor");
 
     const clase =
-        document.getElementById(
-            "producto-clase"
-        );
-
+        $("fClase");
 
     const unidad =
-        document.getElementById(
-            "producto-unidad"
-        );
+        $("fUnidad");
 
 
-    proveedor.innerHTML =
-        `<option value="">Seleccionar...</option>`;
+    if (proveedor) {
+
+        proveedor.innerHTML =
+            PROVEEDORES.map(function (valor) {
+
+                return `
+                    <option value="${escapar(valor)}">
+                        ${escapar(valor)}
+                    </option>
+                `;
+
+            }).join("");
+
+    }
 
 
-    PROVEEDORES.forEach(
-        valor => {
+    if (clase) {
 
-            proveedor.innerHTML +=
-                `<option value="${escaparHTML(valor)}">
-                    ${escaparHTML(valor)}
-                </option>`;
-        }
-    );
+        clase.innerHTML =
+            CLASES.map(function (valor) {
 
+                return `
+                    <option value="${escapar(valor)}">
+                        ${escapar(capitalizar(valor))}
+                    </option>
+                `;
 
-    clase.innerHTML =
-        `<option value="">Seleccionar...</option>`;
+            }).join("");
 
-
-    CLASES.forEach(
-        valor => {
-
-            clase.innerHTML +=
-                `<option value="${escaparHTML(valor)}">
-                    ${escaparHTML(valor)}
-                </option>`;
-        }
-    );
+    }
 
 
-    unidad.innerHTML =
-        `<option value="">Seleccionar...</option>`;
+    if (unidad) {
 
+        unidad.innerHTML =
+            UNIDADES.map(function (valor) {
 
-    UNIDADES.forEach(
-        valor => {
+                return `
+                    <option value="${escapar(valor)}">
+                        ${escapar(valor)}
+                    </option>
+                `;
 
-            unidad.innerHTML +=
-                `<option value="${escaparHTML(valor)}">
-                    ${escaparHTML(valor)}
-                </option>`;
-        }
-    );
+            }).join("");
 
-
-    rellenarFiltroClases();
+    }
 
 }
 
 
-/* =========================================================
-   FILTRO CLASES
-   ========================================================= */
+// ============================================================
+// NAVEGACIÓN DE CLASES
+// ============================================================
 
-function rellenarFiltroClases() {
+function renderNav() {
 
-    const select =
-        document.getElementById(
-            "filtro-clase"
-        );
+    const nav =
+        $("classNav");
 
+    if (!nav) return;
 
-    select.innerHTML =
-        `<option value="">
-            Todas las clases
-        </option>`;
 
+    let html = "";
 
-    CLASES.forEach(
-        clase => {
 
-            select.innerHTML +=
-                `<option value="${escaparHTML(clase)}">
-                    ${escaparHTML(clase)}
-                </option>`;
-        }
-    );
-}
+    CLASES.forEach(function (clase) {
 
-
-/* =========================================================
-   RELLENAR PRODUCTOS EN SELECTS
-   ========================================================= */
-
-function rellenarSelectProductos() {
-
-    const selects = [
-
-        document.getElementById(
-            "movimiento-producto"
-        ),
-
-        document.getElementById(
-            "historial-filtro-producto"
-        )
-
-    ];
-
-
-    const productos =
-        [...datos.productos].sort(
-            (
-                a,
-                b
-            ) =>
-                normalizarTexto(
-                    a.nombre
-                ).localeCompare(
-                    normalizarTexto(
-                        b.nombre
-                    ),
-                    "es"
-                )
-        );
-
-
-    selects.forEach(
-        select => {
-
-            if (!select) {
-
-                return;
-            }
-
-
-            const valorAnterior =
-                select.value;
-
-
-            if (
-                select.id ===
-                "historial-filtro-producto"
-            ) {
-
-                select.innerHTML =
-                    `<option value="">
-                        Todos los productos
-                    </option>`;
-
-            }
-
-            else {
-
-                select.innerHTML =
-                    `<option value="">
-                        Seleccionar producto...
-                    </option>`;
-            }
-
-
-            productos.forEach(
-                producto => {
-
-                    select.innerHTML +=
-                        `<option value="${producto.id}">
-                            ${escaparHTML(
-                                producto.nombre
-                            )}
-                        </option>`;
-                }
-            );
-
-
-            if (
-                valorAnterior &&
-                productos.some(
-                    producto =>
-                        producto.id ===
-                        valorAnterior
-                )
-            ) {
-
-                select.value =
-                    valorAnterior;
-            }
-        }
-    );
-}
-
-
-/* =========================================================
-   INSTALAR EVENTOS
-   ========================================================= */
-
-function instalarEventos() {
-
-
-    /* NAVEGACIÓN */
-
-    document.querySelectorAll(
-        ".nav-button"
-    ).forEach(
-        boton => {
-
-            boton.addEventListener(
-                "click",
-                () => {
-
-                    mostrarPagina(
-                        boton.dataset.page
-                    );
-
-                }
-            );
-        }
-    );
-
-
-    /* BOTONES DE CAMBIO DE PÁGINA */
-
-    document.querySelectorAll(
-        "[data-go-page]"
-    ).forEach(
-        boton => {
-
-            boton.addEventListener(
-                "click",
-                () => {
-
-                    mostrarPagina(
-                        boton.dataset.goPage
-                    );
-
-                }
-            );
-        }
-    );
-
-
-    /* NUEVO PRODUCTO */
-
-    document.getElementById(
-        "btn-nuevo-producto"
-    ).addEventListener(
-        "click",
-        () => abrirModalProducto()
-    );
-
-
-    document.getElementById(
-        "btn-inicio-nuevo-producto"
-    ).addEventListener(
-        "click",
-        () => abrirModalProducto()
-    );
-
-
-    /* FORMULARIO PRODUCTO */
-
-    document.getElementById(
-        "form-producto"
-    ).addEventListener(
-        "submit",
-        guardarProducto
-    );
-
-
-    /* FORMULARIO LOTE */
-
-    document.getElementById(
-        "form-lote"
-    ).addEventListener(
-        "submit",
-        guardarLote
-    );
-
-
-    /* FORMULARIO MOVIMIENTO */
-
-    document.getElementById(
-        "form-movimiento"
-    ).addEventListener(
-        "submit",
-        guardarMovimiento
-    );
-
-
-    /* PRODUCTO MOVIMIENTO */
-
-    document.getElementById(
-        "movimiento-producto"
-    ).addEventListener(
-        "change",
-        actualizarLotesMovimiento
-    );
-
-
-    document.getElementById(
-        "movimiento-lote"
-    ).addEventListener(
-        "change",
-        actualizarInfoStockMovimiento
-    );
-
-
-    /* ENTRADA */
-
-    document.getElementById(
-        "btn-nueva-entrada"
-    ).addEventListener(
-        "click",
-        () =>
-            abrirModalMovimiento(
-                "entrada"
-            )
-    );
-
-
-    /* CONSUMO */
-
-    document.getElementById(
-        "btn-nuevo-consumo"
-    ).addEventListener(
-        "click",
-        () =>
-            abrirModalMovimiento(
-                "consumo"
-            )
-    );
-
-
-    /* FILTROS PRODUCTOS */
-
-    document.getElementById(
-        "buscar-productos"
-    ).addEventListener(
-        "input",
-        renderProductos
-    );
-
-
-    document.getElementById(
-        "filtro-clase"
-    ).addEventListener(
-        "change",
-        renderProductos
-    );
-
-
-    document.getElementById(
-        "filtro-stock"
-    ).addEventListener(
-        "change",
-        renderProductos
-    );
-
-
-    document.getElementById(
-        "btn-limpiar-filtros"
-    ).addEventListener(
-        "click",
-        limpiarFiltros
-    );
-
-
-    /* FILTROS MOVIMIENTOS */
-
-    document.getElementById(
-        "buscar-movimientos"
-    ).addEventListener(
-        "input",
-        renderMovimientos
-    );
-
-
-    document.getElementById(
-        "filtro-tipo-movimiento"
-    ).addEventListener(
-        "change",
-        renderMovimientos
-    );
-
-
-    /* FILTROS HISTORIAL */
-
-    document.getElementById(
-        "historial-busqueda"
-    ).addEventListener(
-        "input",
-        renderHistorial
-    );
-
-
-    document.getElementById(
-        "historial-filtro-producto"
-    ).addEventListener(
-        "change",
-        renderHistorial
-    );
-
-
-    document.getElementById(
-        "historial-filtro-tipo"
-    ).addEventListener(
-        "change",
-        renderHistorial
-    );
-
-
-    /* EXPORTAR JSON */
-
-    document.getElementById(
-        "btn-exportar-json"
-    ).addEventListener(
-        "click",
-        exportarJSON
-    );
-
-
-    /* IMPORTAR JSON */
-
-    document.getElementById(
-        "btn-importar-json"
-    ).addEventListener(
-        "click",
-        () =>
-            document.getElementById(
-                "input-importar-json"
-            ).click()
-    );
-
-
-    document.getElementById(
-        "input-importar-json"
-    ).addEventListener(
-        "change",
-        importarJSON
-    );
-
-
-    /* PDF */
-
-    document.getElementById(
-        "btn-exportar-pdf"
-    ).addEventListener(
-        "click",
-        exportarPDF
-    );
-
-
-    /* CERRAR MODALES */
-
-    document.querySelectorAll(
-        "[data-close-modal]"
-    ).forEach(
-        boton => {
-
-            boton.addEventListener(
-                "click",
-                () => {
-
-                    cerrarModal(
-                        boton.dataset.closeModal
-                    );
-
-                }
-            );
-        }
-    );
-
-
-    /* CLICK FUERA DEL MODAL */
-
-    document.querySelectorAll(
-        ".modal"
-    ).forEach(
-        modal => {
-
-            modal.addEventListener(
-                "click",
-                evento => {
-
-                    if (
-                        evento.target ===
-                        modal
-                    ) {
-
-                        cerrarModal(
-                            modal.id
-                        );
-
-                    }
-                }
-            );
-        }
-    );
-
-
-    /* ESC */
-
-    document.addEventListener(
-        "keydown",
-        evento => {
-
-            if (
-                evento.key ===
-                "Escape"
-            ) {
-
-                document.querySelectorAll(
-                    ".modal.show"
-                ).forEach(
-                    modal =>
-                        cerrarModal(
-                            modal.id
-                        )
-                );
-            }
-        }
-    );
-
-
-    /* TABLA PRODUCTOS */
-
-    document.getElementById(
-        "contenedor-tablas-productos"
-    ).addEventListener(
-        "click",
-        manejarAccionesProductos
-    );
-
-
-    /* TABLA MOVIMIENTOS */
-
-    document.getElementById(
-        "tabla-movimientos"
-    ).addEventListener(
-        "click",
-        manejarAccionesMovimientos
-    );
-
-
-    /* HISTORIAL */
-
-    document.getElementById(
-        "tabla-historial"
-    ).addEventListener(
-        "click",
-        manejarAccionesMovimientos
-    );
-
-}
-
-
-/* =========================================================
-   MOSTRAR PÁGINA
-   ========================================================= */
-
-function mostrarPagina(
-    pagina
-) {
-
-    document.querySelectorAll(
-        ".page"
-    ).forEach(
-        elemento => {
-
-            elemento.classList.toggle(
-                "active",
-                elemento.id ===
-                "page-" + pagina
-            );
-
-        }
-    );
-
-
-    document.querySelectorAll(
-        ".nav-button"
-    ).forEach(
-        boton => {
-
-            boton.classList.toggle(
-                "active",
-                boton.dataset.page ===
-                pagina
-            );
-
-        }
-    );
-
-
-    window.scrollTo(
-        0,
-        0
-    );
-}
-
-
-/* =========================================================
-   ACTUALIZAR TODO
-   ========================================================= */
-
-function actualizarTodo() {
-
-    rellenarSelectProductos();
-
-    renderInicio();
-
-    renderProductos();
-
-    renderMovimientos();
-
-    renderHistorial();
-
-}
-
-
-/* =========================================================
-   ABRIR MODAL PRODUCTO
-   ========================================================= */
-
-function abrirModalProducto(
-    productoId = null
-) {
-
-    const formulario =
-        document.getElementById(
-            "form-producto"
-        );
-
-
-    formulario.reset();
-
-
-    document.getElementById(
-        "producto-id"
-    ).value = "";
-
-
-    document.getElementById(
-        "producto-lote-id"
-    ).value = "";
-
-
-    document.getElementById(
-        "producto-stock-minimo"
-    ).value = "0";
-
-
-    if (
-        productoId
-    ) {
-
-        const producto =
-            obtenerProducto(
-                productoId
-            );
-
-
-        if (!producto) {
-
-            return;
-        }
-
-
-        document.getElementById(
-            "modal-producto-titulo"
-        ).textContent =
-            "Editar producto";
-
-
-        document.getElementById(
-            "producto-id"
-        ).value =
-            producto.id;
-
-
-        document.getElementById(
-            "producto-nombre"
-        ).value =
-            producto.nombre;
-
-
-        document.getElementById(
-            "producto-proveedor"
-        ).value =
-            producto.proveedor;
-
-
-        document.getElementById(
-            "producto-clase"
-        ).value =
-            producto.clase;
-
-
-        document.getElementById(
-            "producto-unidad"
-        ).value =
-            producto.unidad;
-
-
-        document.getElementById(
-            "producto-dosis"
-        ).value =
-            producto.dosis;
-
-
-        document.getElementById(
-            "producto-caracteristicas"
-        ).value =
-            producto.caracteristicas;
-
-
-        document.getElementById(
-            "producto-stock-minimo"
-        ).value =
-            producto.stockMinimo;
-
-
-        const primerLote =
-            producto.lotes[0];
-
-
-        if (
-            primerLote
-        ) {
-
-            document.getElementById(
-                "producto-lote-id"
-            ).value =
-                primerLote.id;
-
-
-            document.getElementById(
-                "producto-lote"
-            ).value =
-                primerLote.nombre;
-
-
-            document.getElementById(
-                "producto-cantidad"
-            ).value =
-                primerLote.cantidadInicial;
-        }
-
-    }
-
-    else {
-
-        document.getElementById(
-            "modal-producto-titulo"
-        ).textContent =
-            "Nuevo producto";
-    }
-
-
-    abrirModal(
-        "modal-producto"
-    );
-}
-
-
-/* =========================================================
-   GUARDAR PRODUCTO
-   ========================================================= */
-
-function guardarProducto(
-    evento
-) {
-
-    evento.preventDefault();
-
-
-    const id =
-        document.getElementById(
-            "producto-id"
-        ).value;
-
-
-    const nombre =
-        document.getElementById(
-            "producto-nombre"
-        ).value.trim();
-
-
-    const proveedor =
-        document.getElementById(
-            "producto-proveedor"
-        ).value;
-
-
-    const clase =
-        document.getElementById(
-            "producto-clase"
-        ).value;
-
-
-    const unidad =
-        document.getElementById(
-            "producto-unidad"
-        ).value;
-
-
-    const dosis =
-        document.getElementById(
-            "producto-dosis"
-        ).value.trim();
-
-
-    const loteNombre =
-        document.getElementById(
-            "producto-lote"
-        ).value.trim();
-
-
-    const cantidadInicial =
-        Number(
-            document.getElementById(
-                "producto-cantidad"
-            ).value
-        );
-
-
-    const stockMinimo =
-        Number(
-            document.getElementById(
-                "producto-stock-minimo"
-            ).value
-        );
-
-
-    const caracteristicas =
-        document.getElementById(
-            "producto-caracteristicas"
-        ).value.trim();
-
-
-    if (!nombre) {
-
-        mostrarToast(
-            "Introduce el nombre del producto.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (!proveedor) {
-
-        mostrarToast(
-            "Selecciona el proveedor.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (!clase) {
-
-        mostrarToast(
-            "Selecciona la clase.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (!unidad) {
-
-        mostrarToast(
-            "Selecciona la unidad.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (!loteNombre) {
-
-        mostrarToast(
-            "Introduce el lote.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (
-        !Number.isFinite(
-            cantidadInicial
-        ) ||
-        cantidadInicial < 0
-    ) {
-
-        mostrarToast(
-            "Introduce una cantidad inicial válida.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (
-        !Number.isFinite(
-            stockMinimo
-        ) ||
-        stockMinimo < 0
-    ) {
-
-        mostrarToast(
-            "Introduce un stock mínimo válido.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    /* EDITAR */
-
-    if (id) {
-
-        const producto =
-            obtenerProducto(
-                id
-            );
-
-
-        if (!producto) {
-
-            return;
-        }
-
-
-        producto.nombre =
-            nombre;
-
-
-        producto.proveedor =
-            proveedor;
-
-
-        producto.clase =
-            clase;
-
-
-        producto.unidad =
-            unidad;
-
-
-        producto.dosis =
-            dosis;
-
-
-        producto.caracteristicas =
-            caracteristicas;
-
-
-        producto.stockMinimo =
-            stockMinimo;
-
-
-        const loteId =
-            document.getElementById(
-                "producto-lote-id"
-            ).value;
-
-
-        const lote =
-            obtenerLote(
-                id,
-                loteId
-            );
-
-
-        if (lote) {
-
-            lote.nombre =
-                loteNombre;
-
-            /*
-               La cantidad inicial solo representa
-               la mercancía que había cuando se creó
-               el lote.
-            */
-
-            lote.cantidadInicial =
-                cantidadInicial;
-        }
-
-
-        guardarDatos();
-
-        cerrarModal(
-            "modal-producto"
-        );
-
-        actualizarTodo();
-
-
-        mostrarToast(
-            "Producto actualizado correctamente.",
-            "success"
-        );
-
-
-        return;
-    }
-
-
-    /* NUEVO */
-
-    const nuevoProducto = {
-
-        id:
-            generarId(),
-
-        nombre:
-            nombre,
-
-        proveedor:
-            proveedor,
-
-        clase:
-            clase,
-
-        unidad:
-            unidad,
-
-        dosis:
-            dosis,
-
-        caracteristicas:
-            caracteristicas,
-
-        stockMinimo:
-            stockMinimo,
-
-        lotes: [
-
-            {
-
-                id:
-                    generarId(),
-
-                nombre:
-                    loteNombre,
-
-                cantidadInicial:
-                    cantidadInicial
-
-            }
-
-        ]
-
-    };
-
-
-    datos.productos.push(
-        nuevoProducto
-    );
-
-
-    guardarDatos();
-
-    cerrarModal(
-        "modal-producto"
-    );
-
-    actualizarTodo();
-
-
-    mostrarToast(
-        "Producto creado correctamente.",
-        "success"
-    );
-}
-
-
-/* =========================================================
-   ABRIR NUEVO LOTE
-   ========================================================= */
-
-function abrirModalLote(
-    productoId
-) {
-
-    const producto =
-        obtenerProducto(
-            productoId
-        );
-
-
-    if (!producto) {
-
-        return;
-    }
-
-
-    document.getElementById(
-        "form-lote"
-    ).reset();
-
-
-    document.getElementById(
-        "lote-producto-id"
-    ).value =
-        productoId;
-
-
-    abrirModal(
-        "modal-lote"
-    );
-}
-
-
-/* =========================================================
-   GUARDAR LOTE
-   ========================================================= */
-
-function guardarLote(
-    evento
-) {
-
-    evento.preventDefault();
-
-
-    const productoId =
-        document.getElementById(
-            "lote-producto-id"
-        ).value;
-
-
-    const nombre =
-        document.getElementById(
-            "nuevo-lote-nombre"
-        ).value.trim();
-
-
-    const cantidad =
-        Number(
-            document.getElementById(
-                "nuevo-lote-cantidad"
-            ).value
-        );
-
-
-    const producto =
-        obtenerProducto(
-            productoId
-        );
-
-
-    if (!producto) {
-
-        return;
-    }
-
-
-    if (!nombre) {
-
-        mostrarToast(
-            "Introduce el número de lote.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (
-        !Number.isFinite(
-            cantidad
-        ) ||
-        cantidad < 0
-    ) {
-
-        mostrarToast(
-            "Introduce una cantidad válida.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    const duplicado =
-        producto.lotes.some(
-            lote =>
-                normalizarTexto(
-                    lote.nombre
-                ) ===
-                normalizarTexto(
-                    nombre
-                )
-        );
-
-
-    if (duplicado) {
-
-        mostrarToast(
-            "Ese lote ya existe para este producto.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    producto.lotes.push({
-
-        id:
-            generarId(),
-
-        nombre:
-            nombre,
-
-        cantidadInicial:
-            cantidad
+        html += `
+            <button
+                class="${clase === claseActual ? "active" : ""}"
+                data-class="${escapar(clase)}"
+            >
+                ${escapar(capitalizar(clase))}
+            </button>
+        `;
 
     });
 
 
-    guardarDatos();
-
-    cerrarModal(
-        "modal-lote"
-    );
-
-    actualizarTodo();
-
-
-    mostrarToast(
-        "Nuevo lote añadido correctamente.",
-        "success"
-    );
-}
-
-
-/* =========================================================
-   ABRIR MODAL MOVIMIENTO
-   ========================================================= */
-
-function abrirModalMovimiento(
-    tipo,
-    productoId = "",
-    loteId = "",
-    movimientoId = ""
-) {
-
-    const formulario =
-        document.getElementById(
-            "form-movimiento"
-        );
-
-
-    formulario.reset();
-
-
-    document.getElementById(
-        "movimiento-id"
-    ).value =
-        movimientoId;
-
-
-    document.getElementById(
-        "movimiento-tipo"
-    ).value =
-        tipo;
-
-
-    document.getElementById(
-        "movimiento-fecha"
-    ).value =
-        fechaHoy();
-
-
-    const titulo =
-        document.getElementById(
-            "modal-movimiento-titulo"
-        );
-
-
-    const descripcion =
-        document.getElementById(
-            "modal-movimiento-descripcion"
-        );
-
-
-    const boton =
-        document.getElementById(
-            "btn-guardar-movimiento"
-        );
-
-
-    if (
-        movimientoId
-    ) {
-
-        titulo.textContent =
-            "Editar movimiento";
-
-
-        descripcion.textContent =
-            "Modifica el movimiento. El stock se recalculará automáticamente.";
-
-
-        boton.textContent =
-            "Guardar cambios";
-
-    }
-
-    else if (
-        tipo ===
-        "entrada"
-    ) {
-
-        titulo.textContent =
-            "Nueva entrada";
-
-
-        descripcion.textContent =
-            "Registra nueva mercancía recibida.";
-
-
-        boton.textContent =
-            "Guardar entrada";
-    }
-
-    else {
-
-        titulo.textContent =
-            "Nuevo consumo";
-
-
-        descripcion.textContent =
-            "Registra producto utilizado durante un proceso.";
-
-
-        boton.textContent =
-            "Guardar consumo";
-    }
-
-
-    const selectProducto =
-        document.getElementById(
-            "movimiento-producto"
-        );
-
-
-    selectProducto.value =
-        productoId || "";
-
-
-    actualizarLotesMovimiento();
-
-
-    document.getElementById(
-        "movimiento-lote"
-    ).value =
-        loteId || "";
-
-
-    actualizarInfoStockMovimiento();
-
-
-    abrirModal(
-        "modal-movimiento"
-    );
-}
-
-
-/* =========================================================
-   ACTUALIZAR LOTES MOVIMIENTO
-   ========================================================= */
-
-function actualizarLotesMovimiento() {
-
-    const productoId =
-        document.getElementById(
-            "movimiento-producto"
-        ).value;
-
-
-    const selectLote =
-        document.getElementById(
-            "movimiento-lote"
-        );
-
-
-    selectLote.innerHTML =
-        `<option value="">
-            Seleccionar lote...
-        </option>`;
-
-
-    const producto =
-        obtenerProducto(
-            productoId
-        );
-
-
-    if (!producto) {
-
-        actualizarInfoStockMovimiento();
-
-        return;
-    }
-
-
-    producto.lotes.forEach(
-        lote => {
-
-            const stock =
-                calcularStockLote(
-                    productoId,
-                    lote.id
-                );
-
-
-            selectLote.innerHTML +=
-                `<option value="${lote.id}">
-                    ${escaparHTML(
-                        lote.nombre
-                    )}
-                    — Stock:
-                    ${formatearNumero(
-                        stock
-                    )}
-                    ${escaparHTML(
-                        producto.unidad
-                    )}
-                </option>`;
-        }
-    );
-
-
-    actualizarInfoStockMovimiento();
-}
-
-
-/* =========================================================
-   INFORMACIÓN STOCK MOVIMIENTO
-   ========================================================= */
-
-function actualizarInfoStockMovimiento() {
-
-    const productoId =
-        document.getElementById(
-            "movimiento-producto"
-        ).value;
-
-
-    const loteId =
-        document.getElementById(
-            "movimiento-lote"
-        ).value;
-
-
-    const tipo =
-        document.getElementById(
-            "movimiento-tipo"
-        ).value;
-
-
-    const contenedor =
-        document.getElementById(
-            "movimiento-stock-info"
-        );
-
-
-    if (
-        !productoId ||
-        !loteId
-    ) {
-
-        contenedor.innerHTML =
-            "Selecciona un producto y un lote.";
-
-        return;
-    }
-
-
-    const producto =
-        obtenerProducto(
-            productoId
-        );
-
-
-    const lote =
-        obtenerLote(
-            productoId,
-            loteId
-        );
-
-
-    if (
-        !producto ||
-        !lote
-    ) {
-
-        contenedor.innerHTML =
-            "";
-
-        return;
-    }
-
-
-    const stock =
-        calcularStockLote(
-            productoId,
-            loteId
-        );
-
-
-    if (
-        tipo ===
-        "consumo"
-    ) {
-
-        contenedor.innerHTML =
-
-            `<strong>
-                Stock disponible:
-            </strong>
-            ${formatearNumero(
-                stock
-            )}
-            ${escaparHTML(
-                producto.unidad
-            )}`;
-
-    }
-
-    else {
-
-        contenedor.innerHTML =
-
-            `<strong>
-                Stock actual del lote:
-            </strong>
-            ${formatearNumero(
-                stock
-            )}
-            ${escaparHTML(
-                producto.unidad
-            )}`;
-    }
-}
-
-
-/* =========================================================
-   GUARDAR MOVIMIENTO
-   ========================================================= */
-
-function guardarMovimiento(
-    evento
-) {
-
-    evento.preventDefault();
-
-
-    const movimientoId =
-        document.getElementById(
-            "movimiento-id"
-        ).value;
-
-
-    const tipo =
-        document.getElementById(
-            "movimiento-tipo"
-        ).value;
-
-
-    const productoId =
-        document.getElementById(
-            "movimiento-producto"
-        ).value;
-
-
-    const loteId =
-        document.getElementById(
-            "movimiento-lote"
-        ).value;
-
-
-    const cantidad =
-        Number(
-            document.getElementById(
-                "movimiento-cantidad"
-            ).value
-        );
-
-
-    const fecha =
-        document.getElementById(
-            "movimiento-fecha"
-        ).value;
-
-
-    const observaciones =
-        document.getElementById(
-            "movimiento-observaciones"
-        ).value.trim();
-
-
-    if (!productoId) {
-
-        mostrarToast(
-            "Selecciona un producto.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (!loteId) {
-
-        mostrarToast(
-            "Selecciona un lote.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (
-        !Number.isFinite(
-            cantidad
-        ) ||
-        cantidad <= 0
-    ) {
-
-        mostrarToast(
-            "Introduce una cantidad válida.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (!fecha) {
-
-        mostrarToast(
-            "Selecciona la fecha.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    const producto =
-        obtenerProducto(
-            productoId
-        );
-
-
-    if (!producto) {
-
-        return;
-    }
-
-
-    /*
-       EDITAR MOVIMIENTO
-    */
-
-    if (
-        movimientoId
-    ) {
-
-        const movimiento =
-            datos.movimientos.find(
-                item =>
-                    item.id ===
-                    movimientoId
-            );
-
-
-        if (!movimiento) {
-
-            mostrarToast(
-                "Movimiento no encontrado.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        /*
-           Para comprobar el stock durante una edición
-           eliminamos temporalmente el efecto del
-           movimiento antiguo.
-        */
-
-        const stockSinMovimiento =
-            calcularStockLoteSinMovimiento(
-                movimiento.productoId,
-                movimiento.loteId,
-                movimiento.id
-            );
-
-
-        /*
-           Si el nuevo movimiento es un consumo,
-           debemos comprobar que haya stock.
-        */
-
-        if (
-            tipo ===
-            "consumo" &&
-            productoId ===
-            movimiento.productoId &&
-            loteId ===
-            movimiento.loteId &&
-            cantidad >
-            stockSinMovimiento
-        ) {
-
-            mostrarToast(
-                "No hay suficiente stock para ese consumo.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        movimiento.tipo =
-            tipo;
-
-
-        movimiento.productoId =
-            productoId;
-
-
-        movimiento.loteId =
-            loteId;
-
-
-        movimiento.cantidad =
-            cantidad;
-
-
-        movimiento.fecha =
-            fecha;
-
-
-        movimiento.observaciones =
-            observaciones;
-
-
-        guardarDatos();
-
-        cerrarModal(
-            "modal-movimiento"
-        );
-
-        actualizarTodo();
-
-
-        mostrarToast(
-            "Movimiento actualizado. El stock ha sido recalculado.",
-            "success"
-        );
-
-
-        return;
-    }
-
-
-    /*
-       NUEVO CONSUMO
-    */
-
-    if (
-        tipo ===
-        "consumo"
-    ) {
-
-        const stock =
-            calcularStockLote(
-                productoId,
-                loteId
-            );
-
-
-        if (
-            cantidad >
-            stock
-        ) {
-
-            mostrarToast(
-                "No hay suficiente stock disponible.",
-                "error"
-            );
-
-            return;
-        }
-    }
-
-
-    const nuevoMovimiento = {
-
-        id:
-            generarId(),
-
-        tipo:
-            tipo,
-
-        productoId:
-            productoId,
-
-        loteId:
-            loteId,
-
-        cantidad:
-            cantidad,
-
-        fecha:
-            fecha,
-
-        observaciones:
-            observaciones,
-
-        creado:
-            new Date().toISOString()
-
-    };
-
-
-    datos.movimientos.push(
-        nuevoMovimiento
-    );
-
-
-    guardarDatos();
-
-    cerrarModal(
-        "modal-movimiento"
-    );
-
-    actualizarTodo();
-
-
-    mostrarToast(
-        tipo === "entrada"
-            ? "Entrada registrada correctamente."
-            : "Consumo registrado correctamente.",
-        "success"
-    );
-}
-
-
-/* =========================================================
-   STOCK SIN UN MOVIMIENTO
-   ========================================================= */
-
-function calcularStockLoteSinMovimiento(
-    productoId,
-    loteId,
-    movimientoId
-) {
-
-    const lote =
-        obtenerLote(
-            productoId,
-            loteId
-        );
-
-
-    if (!lote) {
-
-        return 0;
-    }
-
-
-    let stock =
-        numeroSeguro(
-            lote.cantidadInicial
-        );
-
-
-    datos.movimientos.forEach(
-        movimiento => {
-
-            if (
-                movimiento.id ===
-                movimientoId
-            ) {
-
-                return;
-            }
-
-
-            if (
-                movimiento.productoId !==
-                productoId
-            ) {
-
-                return;
-            }
-
-
-            if (
-                movimiento.loteId !==
-                loteId
-            ) {
-
-                return;
-            }
-
-
-            const cantidad =
-                numeroSeguro(
-                    movimiento.cantidad
-                );
-
-
-            if (
-                movimiento.tipo ===
-                "entrada"
-            ) {
-
-                stock +=
-                    cantidad;
-            }
-
-            else {
-
-                stock -=
-                    cantidad;
-            }
-
-        }
-    );
-
-
-    return Math.max(
-        0,
-        stock
-    );
-}
-
-
-/* =========================================================
-   RENDER PRODUCTOS
-   ========================================================= */
-
-function renderProductos() {
-
-    const contenedor =
-        document.getElementById(
-            "contenedor-tablas-productos"
-        );
-
-
-    const busqueda =
-        normalizarTexto(
-            document.getElementById(
-                "buscar-productos"
-            ).value
-        );
-
-
-    const filtroClase =
-        document.getElementById(
-            "filtro-clase"
-        ).value;
-
-
-    const filtroStock =
-        document.getElementById(
-            "filtro-stock"
-        ).value;
-
-
-    let productos =
-        [...datos.productos];
-
-
-    productos =
-        productos.filter(
-            producto => {
-
-                const texto =
-                    normalizarTexto(
-                        [
-                            producto.nombre,
-                            producto.proveedor,
-                            producto.clase,
-                            producto.unidad,
-                            producto.dosis,
-                            producto.caracteristicas,
-                            ...producto.lotes.map(
-                                lote =>
-                                    lote.nombre
-                            )
-                        ].join(
-                            " "
-                        )
-                    );
-
-
-                if (
-                    busqueda &&
-                    !texto.includes(
-                        busqueda
-                    )
-                ) {
-
-                    return false;
-                }
-
-
-                if (
-                    filtroClase &&
-                    producto.clase !==
-                    filtroClase
-                ) {
-
-                    return false;
-                }
-
-
-                const stock =
-                    calcularStockProducto(
-                        producto.id
-                    );
-
-
-                const minimo =
-                    numeroSeguro(
-                        producto.stockMinimo
-                    );
-
-
-                if (
-                    filtroStock ===
-                    "bajo" &&
-                    stock > minimo
-                ) {
-
-                    return false;
-                }
-
-
-                if (
-                    filtroStock ===
-                    "ok" &&
-                    stock <= minimo
-                ) {
-
-                    return false;
-                }
-
-
-                return true;
-
-            }
-        );
-
-
-    if (
-        productos.length ===
-        0
-    ) {
-
-        contenedor.innerHTML =
-            `<div class="content-card">
-                <div class="empty-message">
-                    No hay productos que coincidan con la búsqueda.
-                </div>
-            </div>`;
-
-        return;
-    }
-
-
-    const grupos = {};
-
-
-    productos.forEach(
-        producto => {
-
-            if (
-                !grupos[
-                    producto.clase
-                ]
-            ) {
-
-                grupos[
-                    producto.clase
-                ] = [];
-            }
-
-
-            grupos[
-                producto.clase
-            ].push(
-                producto
-            );
-        }
-    );
-
-
-    const clases =
-        Object.keys(
-            grupos
-        ).sort(
-            (
-                a,
-                b
-            ) =>
-                a.localeCompare(
-                    b,
-                    "es"
-                )
-        );
-
-
-    contenedor.innerHTML =
-        clases.map(
-            clase =>
-                renderGrupoProductos(
-                    clase,
-                    grupos[clase]
-                )
-        ).join(
-            ""
-        );
-}
-
-
-/* =========================================================
-   GRUPO DE PRODUCTOS
-   ========================================================= */
-
-function renderGrupoProductos(
-    clase,
-    productos
-) {
-
-    return `
-
-        <div class="product-class-section">
-
-            <div class="product-class-title">
-
-                <h3>
-                    ${escaparHTML(
-                        clase
-                    )}
-                </h3>
-
-                <span>
-                    ${productos.length}
-                    producto(s)
-                </span>
-
-            </div>
-
-
-            <div class="content-card">
-
-                <div class="table-container">
-
-                    <table class="data-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Producto
-                                </th>
-
-                                <th>
-                                    Proveedor
-                                </th>
-
-                                <th>
-                                    Unidad
-                                </th>
-
-                                <th>
-                                    Dosis <br> (g/hL)
-                                </th>
-
-                                <th>
-                                    Características
-                                </th>
-
-                                <th>
-                                    Lote
-                                </th>
-
-                                <th>
-                                    Inicial
-                                </th>
-
-                                <th>
-                                    Entradas (Kg)
-                                </th>
-
-                                <th>
-                                    Consumos (Kg)
-                                </th>
-
-                                <th>
-                                    Stock (Kg)
-                                </th>
-
-                                <th>
-                                    Estado
-                                </th>
-
-                                <th>
-                                    Acciones
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            ${productos.map(
-                                producto =>
-                                    renderFilasProducto(
-                                        producto
-                                    )
-                            ).join(
-                                ""
-                            )}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </div>
-
+    html += `
+        <button
+            class="${claseActual === "__historial" ? "active" : ""}"
+            data-history
+        >
+            📋 Historial
+        </button>
     `;
+
+
+    nav.innerHTML = html;
+
 }
 
 
-/* =========================================================
-   FILAS PRODUCTO
-   ========================================================= */
+// ============================================================
+// MANEJAR CLICS
+// ============================================================
 
-function renderFilasProducto(
-    producto
-) {
+function manejarClick(evento) {
 
-    const lotes =
-        producto.lotes;
+    // --------------------------------------------------------
+    // CLASE
+    // --------------------------------------------------------
 
+    const botonClase =
+        evento.target.closest("[data-class]");
 
-    const totalStock =
-        calcularStockProducto(
-            producto.id
-        );
 
+    if (botonClase) {
 
-    const minimo =
-        numeroSeguro(
-            producto.stockMinimo
-        );
+        claseActual =
+            botonClase.dataset.class;
 
+        busqueda = "";
 
-    const bajo =
-        totalStock <=
-        minimo;
 
+        if ($("searchInput")) {
 
-    const totalEntradas =
-        calcularEntradasProducto(
-            producto.id
-        );
-
-
-    const totalConsumos =
-        calcularConsumosProducto(
-            producto.id
-        );
-
-
-    return lotes.map(
-        (
-            lote,
-            indice
-        ) => {
-
-            const stockLote =
-                calcularStockLote(
-                    producto.id,
-                    lote.id
-                );
-
-
-            const entradasLote =
-                datos.movimientos
-                    .filter(
-                        movimiento =>
-                            movimiento.productoId ===
-                            producto.id &&
-                            movimiento.loteId ===
-                            lote.id &&
-                            movimiento.tipo ===
-                            "entrada"
-                    )
-                    .reduce(
-                        (
-                            total,
-                            movimiento
-                        ) =>
-                            total +
-                            numeroSeguro(
-                                movimiento.cantidad
-                            ),
-                        0
-                    );
-
-
-            const consumosLote =
-                datos.movimientos
-                    .filter(
-                        movimiento =>
-                            movimiento.productoId ===
-                            producto.id &&
-                            movimiento.loteId ===
-                            lote.id &&
-                            movimiento.tipo ===
-                            "consumo"
-                    )
-                    .reduce(
-                        (
-                            total,
-                            movimiento
-                        ) =>
-                            total +
-                            numeroSeguro(
-                                movimiento.cantidad
-                            ),
-                        0
-                    );
-
-
-            return `
-
-                <tr
-                    class="${
-                        bajo
-                            ? "stock-bajo"
-                            : ""
-                    }"
-                >
-
-                    ${
-                        indice === 0
-                            ? `
-
-                                <td
-                                    rowspan="${lotes.length}"
-                                >
-
-                                    <div class="product-name">
-                                        ${escaparHTML(
-                                            producto.nombre
-                                        )}
-                                    </div>
-
-                                    <div class="product-extra">
-                                        Stock total:
-                                        ${formatearNumero(
-                                            totalStock
-                                        )}
-                                        ${escaparHTML(
-                                            producto.unidad
-                                        )}
-                                    </div>
-
-                                </td>
-
-
-                                <td
-                                    rowspan="${lotes.length}"
-                                >
-                                    ${escaparHTML(
-                                        producto.proveedor
-                                    )}
-                                </td>
-
-
-                                <td
-                                    rowspan="${lotes.length}"
-                                >
-                                    ${escaparHTML(
-                                        producto.unidad
-                                    )}
-                                </td>
-
-
-                                <td
-                                    rowspan="${lotes.length}"
-                                >
-                                    ${escaparHTML(
-                                        producto.dosis ||
-                                        "—"
-                                    )}
-                                </td>
-
-
-                                <td
-                                    rowspan="${lotes.length}"
-                                >
-                                    ${escaparHTML(
-                                        producto.caracteristicas ||
-                                        "—"
-                                    )}
-                                </td>
-
-                            `
-                            : ""
-                    }
-
-
-                    <td class="lote-cell">
-                        ${escaparHTML(
-                            lote.nombre
-                        )}
-                    </td>
-
-
-                    <td>
-                        ${formatearNumero(
-                            lote.cantidadInicial
-                        )}
-                    </td>
-
-
-                    <td>
-                        ${formatearNumero(
-                            entradasLote
-                        )}
-                    </td>
-
-
-                    <td>
-                        ${formatearNumero(
-                            consumosLote
-                        )}
-                    </td>
-
-
-                    <td class="stock-number">
-
-                        ${formatearNumero(
-                            stockLote
-                        )}
-
-                        ${escaparHTML(
-                            producto.unidad
-                        )}
-
-                    </td>
-
-
-                    ${
-                        indice === 0
-                            ? `
-
-                                <td
-                                    rowspan="${lotes.length}"
-                                >
-
-                                    ${
-                                        bajo
-
-                                            ? `
-                                                <span class="stock-warning">
-                                                    ⚠ Stock bajo
-                                                </span>
-                                            `
-
-                                            : `
-                                                <span class="stock-correcto">
-                                                    ✓ Correcto
-                                                </span>
-                                            `
-                                    }
-
-                                    <div class="product-extra">
-                                        Mínimo:
-                                        ${formatearNumero(
-                                            minimo
-                                        )}
-                                        ${escaparHTML(
-                                            producto.unidad
-                                        )}
-                                    </div>
-
-                                </td>
-
-
-                                <td
-                                    rowspan="${lotes.length}"
-                                >
-
-                                    <div class="table-actions">
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-primary"
-                                            data-action="editar-producto"
-                                            data-id="${producto.id}"
-                                        >
-                                            Editar
-                                        </button>
-
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-success"
-                                            data-action="entrada"
-                                            data-producto="${producto.id}"
-                                            data-lote="${lote.id}"
-                                        >
-                                            + Entrada
-                                        </button>
-
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-danger"
-                                            data-action="consumo"
-                                            data-producto="${producto.id}"
-                                            data-lote="${lote.id}"
-                                        >
-                                            − Consumo
-                                        </button>
-
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-secondary"
-                                            data-action="nuevo-lote"
-                                            data-producto="${producto.id}"
-                                        >
-                                            + Lote
-                                        </button>
-
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-warning"
-                                            data-action="eliminar-producto"
-                                            data-id="${producto.id}"
-                                        >
-                                            Eliminar
-                                        </button>
-
-                                    </div>
-
-                                </td>
-
-                            `
-
-                            : `
-
-                                <td>
-
-                                    <div class="table-actions">
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-success"
-                                            data-action="entrada"
-                                            data-producto="${producto.id}"
-                                            data-lote="${lote.id}"
-                                        >
-                                            + Entrada
-                                        </button>
-
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-danger"
-                                            data-action="consumo"
-                                            data-producto="${producto.id}"
-                                            data-lote="${lote.id}"
-                                        >
-                                            − Consumo
-                                        </button>
-
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-small btn-warning"
-                                            data-action="eliminar-lote"
-                                            data-producto="${producto.id}"
-                                            data-lote="${lote.id}"
-                                        >
-                                            Eliminar lote
-                                        </button>
-
-                                    </div>
-
-                                </td>
-
-                            `
-                    }
-
-                </tr>
-
-            `;
+            $("searchInput").value = "";
 
         }
-    ).join(
-        ""
-    );
-}
 
 
-/* =========================================================
-   ACCIONES PRODUCTOS
-   ========================================================= */
-
-function manejarAccionesProductos(
-    evento
-) {
-
-    const boton =
-        evento.target.closest(
-            "[data-action]"
-        );
-
-
-    if (!boton) {
+        mostrarClase();
 
         return;
+
     }
+
+
+    // --------------------------------------------------------
+    // HISTORIAL
+    // --------------------------------------------------------
+
+    const botonHistorial =
+        evento.target.closest("[data-history]");
+
+
+    if (botonHistorial) {
+
+        claseActual = "__historial";
+
+        mostrarHistorial();
+
+        return;
+
+    }
+
+
+    // --------------------------------------------------------
+    // ACCIONES
+    // --------------------------------------------------------
+
+    const botonAccion =
+        evento.target.closest("[data-action]");
+
+
+    if (!botonAccion) return;
 
 
     const accion =
-        boton.dataset.action;
-
+        botonAccion.dataset.action;
 
     const productoId =
-        boton.dataset.producto ||
-        boton.dataset.id;
-
+        botonAccion.dataset.pid;
 
     const loteId =
-        boton.dataset.lote;
+        botonAccion.dataset.lid;
+
+    const movimientoId =
+        botonAccion.dataset.mid;
 
 
-    switch (
-        accion
-    ) {
+    switch (accion) {
 
-        case "editar-producto":
+        case "view":
 
-            abrirModalProducto(
-                productoId
-            );
+            mostrarProducto(productoId);
 
             break;
 
 
-        case "entrada":
+        case "edit-product":
 
-            abrirModalMovimiento(
-                "entrada",
+            abrirProducto(productoId);
+
+            break;
+
+
+        case "delete-product":
+
+            eliminarProducto(productoId);
+
+            break;
+
+
+        case "add-lot":
+
+            abrirLote(productoId);
+
+            break;
+
+
+        case "edit-lot":
+
+            abrirLote(
                 productoId,
                 loteId
             );
@@ -3565,36 +917,7 @@ function manejarAccionesProductos(
             break;
 
 
-        case "consumo":
-
-            abrirModalMovimiento(
-                "consumo",
-                productoId,
-                loteId
-            );
-
-            break;
-
-
-        case "nuevo-lote":
-
-            abrirModalLote(
-                productoId
-            );
-
-            break;
-
-
-        case "eliminar-producto":
-
-            eliminarProducto(
-                productoId
-            );
-
-            break;
-
-
-        case "eliminar-lote":
+        case "delete-lot":
 
             eliminarLote(
                 productoId,
@@ -3603,379 +926,1065 @@ function manejarAccionesProductos(
 
             break;
 
+
+        case "entry":
+
+            abrirMovimiento(
+                productoId,
+                loteId,
+                "entrada"
+            );
+
+            break;
+
+
+        case "consume":
+
+            abrirMovimiento(
+                productoId,
+                loteId,
+                "consumo"
+            );
+
+            break;
+
+
+        case "edit-movement":
+
+            abrirMovimiento(
+                productoId,
+                loteId,
+                null,
+                movimientoId
+            );
+
+            break;
+
+
+        case "delete-movement":
+
+            eliminarMovimiento(
+                movimientoId
+            );
+
+            break;
+
+
+        case "back":
+
+            mostrarClase();
+
+            break;
+
     }
+
 }
 
 
-/* =========================================================
-   ELIMINAR PRODUCTO
-   ========================================================= */
+// ============================================================
+// MOSTRAR CLASE
+// ============================================================
 
-function eliminarProducto(
-    productoId
-) {
+function mostrarClase() {
 
-    const producto =
-        obtenerProducto(
-            productoId
-        );
+    if ($("viewClasses")) {
 
+        $("viewClasses")
+            .classList
+            .remove("hidden");
 
-    if (!producto) {
-
-        return;
     }
 
 
-    const confirmar =
-        confirm(
-            "¿Quieres eliminar el producto \"" +
-            producto.nombre +
-            "\"?\n\n" +
-            "También se eliminarán sus lotes y movimientos.\n\n" +
-            "Esta acción se puede deshacer inmediatamente."
-        );
+    if ($("viewProduct")) {
 
+        $("viewProduct")
+            .classList
+            .add("hidden");
 
-    if (!confirmar) {
-
-        return;
     }
 
 
-    const indice =
-        datos.productos.findIndex(
-            producto =>
-                producto.id ===
-                productoId
-        );
+    if ($("viewHistory")) {
+
+        $("viewHistory")
+            .classList
+            .add("hidden");
+
+    }
 
 
-    const movimientos =
-        datos.movimientos.filter(
-            movimiento =>
-                movimiento.productoId ===
-                productoId
-        );
+    renderNav();
 
+    renderClase();
 
-    ultimoMovimientoEliminado = {
-
-        tipo:
-            "producto",
-
-        producto:
-            JSON.parse(
-                JSON.stringify(
-                    producto
-                )
-            ),
-
-        movimientos:
-            JSON.parse(
-                JSON.stringify(
-                    movimientos
-                )
-            ),
-
-        indice:
-            indice
-
-    };
-
-
-    datos.productos.splice(
-        indice,
-        1
-    );
-
-
-    datos.movimientos =
-        datos.movimientos.filter(
-            movimiento =>
-                movimiento.productoId !==
-                productoId
-        );
-
-
-    guardarDatos();
-
-    actualizarTodo();
-
-
-    mostrarToast(
-        "Producto eliminado. Pulsa Ctrl+Z si quieres recuperarlo.",
-        "warning"
-    );
 }
 
 
-/* =========================================================
-   ELIMINAR LOTE
-   ========================================================= */
+// ============================================================
+// RENDER CLASE
+// ============================================================
 
-function eliminarLote(
-    productoId,
-    loteId
-) {
+function renderClase() {
 
-    const producto =
-        obtenerProducto(
-            productoId
-        );
+    if (claseActual === "__historial") {
 
-
-    if (!producto) {
+        mostrarHistorial();
 
         return;
+
     }
 
 
-    if (
-        producto.lotes.length <=
-        1
-    ) {
+    const titulo =
+        $("classTitle");
 
-        mostrarToast(
-            "No puedes eliminar el único lote del producto.",
-            "error"
-        );
 
-        return;
+    const subtitulo =
+        $("classSubtitle");
+
+
+    if (titulo) {
+
+        titulo.textContent =
+            capitalizar(claseActual);
+
     }
 
 
-    const lote =
-        obtenerLote(
-            productoId,
-            loteId
-        );
+    if (subtitulo) {
 
+        subtitulo.textContent =
+            "Productos de esta clase";
 
-    if (!lote) {
-
-        return;
     }
 
 
-    const confirmar =
-        confirm(
-            "¿Quieres eliminar el lote \"" +
-            lote.nombre +
-            "\"?\n\n" +
-            "También se eliminarán sus movimientos."
-        );
+    const productos =
+        datos.productos.filter(
+            function (p) {
+
+                const pertenece =
+                    p.clase === claseActual;
 
 
-    if (!confirmar) {
+                if (!pertenece) {
 
-        return;
-    }
+                    return false;
 
-
-    const indice =
-        producto.lotes.findIndex(
-            elemento =>
-                elemento.id ===
-                loteId
-        );
+                }
 
 
-    const movimientos =
-        datos.movimientos.filter(
-            movimiento =>
-                movimiento.productoId ===
-                productoId &&
-                movimiento.loteId ===
-                loteId
-        );
-
-
-    ultimoMovimientoEliminado = {
-
-        tipo:
-            "lote",
-
-        productoId:
-            productoId,
-
-        lote:
-            JSON.parse(
-                JSON.stringify(
-                    lote
-                )
-            ),
-
-        movimientos:
-            JSON.parse(
-                JSON.stringify(
-                    movimientos
-                )
-            ),
-
-        indice:
-            indice
-
-    };
-
-
-    producto.lotes.splice(
-        indice,
-        1
-    );
-
-
-    datos.movimientos =
-        datos.movimientos.filter(
-            movimiento =>
-                !(
-                    movimiento.productoId ===
-                    productoId &&
-                    movimiento.loteId ===
-                    loteId
-                )
-        );
-
-
-    guardarDatos();
-
-    actualizarTodo();
-
-
-    mostrarToast(
-        "Lote eliminado.",
-        "warning"
-    );
-}
-
-
-/* =========================================================
-   RENDER MOVIMIENTOS
-   ========================================================= */
-
-function renderMovimientos() {
-
-    const contenedor =
-        document.getElementById(
-            "tabla-movimientos"
-        );
-
-
-    const busqueda =
-        normalizarTexto(
-            document.getElementById(
-                "buscar-movimientos"
-            ).value
-        );
-
-
-    const tipo =
-        document.getElementById(
-            "filtro-tipo-movimiento"
-        ).value;
-
-
-    let movimientos =
-        [...datos.movimientos];
-
-
-    movimientos =
-        movimientos
-            .filter(
-                movimiento => {
-
-                    if (
-                        tipo &&
-                        movimiento.tipo !==
-                        tipo
-                    ) {
-
-                        return false;
-                    }
-
-
-                    const producto =
-                        obtenerProducto(
-                            movimiento.productoId
-                        );
-
-
-                    const lote =
-                        obtenerLote(
-                            movimiento.productoId,
-                            movimiento.loteId
-                        );
-
-
-                    const texto =
-                        normalizarTexto(
-                            [
-                                producto?.nombre,
-                                producto?.proveedor,
-                                lote?.nombre,
-                                movimiento.observaciones
-                            ].join(
-                                " "
-                            )
-                        );
-
-
-                    if (
-                        busqueda &&
-                        !texto.includes(
-                            busqueda
-                        )
-                    ) {
-
-                        return false;
-                    }
-
+                if (!busqueda) {
 
                     return true;
+
                 }
-            )
+
+
+                const texto = (
+
+                    p.nombre +
+                    " " +
+                    p.proveedor +
+                    " " +
+                    p.caracteristicas +
+                    " " +
+                    p.dosis
+
+                ).toLowerCase();
+
+
+                return texto.includes(busqueda);
+
+            }
+        );
+
+
+    const grid =
+        $("productGrid");
+
+
+    if (!grid) return;
+
+
+    if (!productos.length) {
+
+        grid.innerHTML = `
+            <div class="empty">
+                No hay productos que coincidan.
+                <br><br>
+
+                <button
+                    class="btn primary"
+                    onclick="abrirProducto()"
+                >
+                    ＋ Crear producto
+                </button>
+            </div>
+        `;
+
+    } else {
+
+        grid.innerHTML =
+            productos
+                .map(cardProducto)
+                .join("");
+
+    }
+
+
+    renderResumen(productos);
+
+}
+
+
+// ============================================================
+// TARJETA PRODUCTO
+// ============================================================
+
+function cardProducto(p) {
+
+    const stock =
+        stockProducto(p);
+
+
+    const limite =
+        numero(p.bajoStock);
+
+
+    const lotesAgotados =
+        p.lotes.filter(
+            function (l) {
+
+                return (
+                    stockLote(
+                        p.id,
+                        l.id
+                    ) <= 0
+                );
+
+            }
+        ).length;
+
+
+    let claseStock = "";
+
+
+    if (stock <= 0) {
+
+        claseStock = "zero";
+
+    } else if (
+        limite > 0 &&
+        stock <= limite
+    ) {
+
+        claseStock = "low";
+
+    }
+
+
+    let lotesHTML = "";
+
+
+    if (p.lotes.length) {
+
+        lotesHTML =
+            p.lotes
+                .slice(0, 5)
+                .map(function (l) {
+
+                    return `
+                        <div class="lot-line">
+
+                            <span>
+                                Lote
+                                <strong>
+                                    ${escapar(l.nombre)}
+                                </strong>
+                            </span>
+
+                            <span>
+                                ${
+                                    formatoNumero(
+                                        stockLote(
+                                            p.id,
+                                            l.id
+                                        )
+                                    )
+                                }
+                                ${escapar(p.unidad)}
+                            </span>
+
+                        </div>
+                    `;
+
+                })
+                .join("");
+
+    } else {
+
+        lotesHTML = `
+            <div class="meta">
+                Sin lotes creados
+            </div>
+        `;
+
+    }
+
+
+    if (p.lotes.length > 5) {
+
+        lotesHTML += `
+            <div class="meta">
+                + ${p.lotes.length - 5}
+                lote(s) más
+            </div>
+        `;
+
+    }
+
+
+    return `
+        <article
+            class="product-card ${claseStock}"
+        >
+
+            <div class="product-top">
+
+                <div>
+
+                    <h3 class="product-name">
+                        ${escapar(p.nombre)}
+                    </h3>
+
+                    <div class="meta">
+                        ${escapar(p.proveedor)}
+                        ·
+                        ${escapar(p.unidad)}
+                    </div>
+
+                </div>
+
+                <span class="badge">
+                    ${escapar(p.clase)}
+                </span>
+
+            </div>
+
+
+            <div class="stock-big">
+                ${formatoNumero(stock)}
+                ${escapar(p.unidad)}
+            </div>
+
+
+            <div class="stock-label">
+                Stock actual ·
+                ${p.lotes.length}
+                lote(s)
+            </div>
+
+
+            ${
+                limite > 0 &&
+                stock <= limite
+                    ? `
+                        <div class="stock-warn">
+                            ⚠ Bajo stock · límite
+                            ${formatoNumero(limite)}
+                            ${escapar(p.unidad)}
+                        </div>
+                    `
+                    : ""
+            }
+
+
+            <div class="lots-mini">
+
+                ${lotesHTML}
+
+            </div>
+
+
+            <div class="card-actions">
+
+                <button
+                    class="btn primary"
+                    data-action="view"
+                    data-pid="${p.id}"
+                >
+                    Ver producto
+                </button>
+
+
+                <button
+                    class="btn"
+                    data-action="edit-product"
+                    data-pid="${p.id}"
+                >
+                    ✏ Editar
+                </button>
+
+
+                <button
+                    class="btn danger"
+                    data-action="delete-product"
+                    data-pid="${p.id}"
+                >
+                    🗑 Eliminar
+                </button>
+
+            </div>
+
+        </article>
+    `;
+
+}
+
+
+// ============================================================
+// RESUMEN DE CLASE
+// ============================================================
+
+function renderResumen(productos) {
+
+    const elemento =
+        $("classSummary");
+
+
+    if (!elemento) return;
+
+
+    const cantidadProductos =
+        productos.length;
+
+
+    const cantidadLotes =
+        productos.reduce(
+            function (total, p) {
+
+                return total + p.lotes.length;
+
+            },
+            0
+        );
+
+
+    const cantidadInicial =
+        productos.reduce(
+            function (total, p) {
+
+                return total +
+                    p.lotes.reduce(
+                        function (suma, l) {
+
+                            return (
+                                suma +
+                                numero(
+                                    l.cantidadInicial
+                                )
+                            );
+
+                        },
+                        0
+                    );
+
+            },
+            0
+        );
+
+
+    const consumo =
+        productos.reduce(
+            function (total, p) {
+
+                return (
+                    total +
+                    consumoProducto(p)
+                );
+
+            },
+            0
+        );
+
+
+    const stock =
+        productos.reduce(
+            function (total, p) {
+
+                return (
+                    total +
+                    stockProducto(p)
+                );
+
+            },
+            0
+        );
+
+
+    const agotados =
+        productos.reduce(
+            function (total, p) {
+
+                return (
+                    total +
+                    p.lotes.filter(
+                        function (l) {
+
+                            return (
+                                stockLote(
+                                    p.id,
+                                    l.id
+                                ) <= 0
+                            );
+
+                        }
+                    ).length
+                );
+
+            },
+            0
+        );
+
+
+    const bajos =
+        productos.reduce(
+            function (total, p) {
+
+                const limite =
+                    numero(p.bajoStock);
+
+
+                if (limite <= 0) {
+
+                    return total;
+
+                }
+
+
+                return (
+                    total +
+                    p.lotes.filter(
+                        function (l) {
+
+                            const stock =
+                                stockLote(
+                                    p.id,
+                                    l.id
+                                );
+
+                            return (
+                                stock > 0 &&
+                                stock <= limite
+                            );
+
+                        }
+                    ).length
+                );
+
+            },
+            0
+        );
+
+
+    elemento.innerHTML =
+
+        itemResumen(
+            "Productos",
+            cantidadProductos
+        ) +
+
+        itemResumen(
+            "Lotes",
+            cantidadLotes
+        ) +
+
+        itemResumen(
+            "Cantidad inicial",
+            formatoNumero(cantidadInicial)
+        ) +
+
+        itemResumen(
+            "Consumo",
+            formatoNumero(consumo)
+        ) +
+
+        itemResumen(
+            "Stock actual",
+            formatoNumero(stock)
+        ) +
+
+        itemResumen(
+            "Bajo / agotado",
+            bajos + " / " + agotados
+        );
+
+}
+
+
+function itemResumen(nombre, valor) {
+
+    return `
+        <div class="summary-item">
+
+            <b>
+                ${escapar(valor)}
+            </b>
+
+            <span>
+                ${escapar(nombre)}
+            </span>
+
+        </div>
+    `;
+
+}
+
+
+// ============================================================
+// MOSTRAR PRODUCTO
+// ============================================================
+
+function mostrarProducto(productoId) {
+
+    const p =
+        producto(productoId);
+
+
+    if (!p) return;
+
+
+    if ($("viewClasses")) {
+
+        $("viewClasses")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("viewHistory")) {
+
+        $("viewHistory")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("viewProduct")) {
+
+        $("viewProduct")
+            .classList
+            .remove("hidden");
+
+    }
+
+
+    renderNav();
+
+
+    const stock =
+        stockProducto(p);
+
+
+    $("viewProduct").innerHTML = `
+
+        <div class="detail-card">
+
+            <div class="detail-head">
+
+                <div>
+
+                    <button
+                        class="btn"
+                        data-action="back"
+                    >
+                        ← Volver
+                    </button>
+
+
+                    <h2 class="detail-title">
+                        ${escapar(p.nombre)}
+                    </h2>
+
+
+                    <div class="meta">
+                        ${escapar(p.clase)}
+                        ·
+                        ${escapar(p.proveedor)}
+                    </div>
+
+                </div>
+
+
+                <div class="card-actions">
+
+                    <button
+                        class="btn"
+                        data-action="edit-product"
+                        data-pid="${p.id}"
+                    >
+                        ✏ Editar producto
+                    </button>
+
+
+                    <button
+                        class="btn danger"
+                        data-action="delete-product"
+                        data-pid="${p.id}"
+                    >
+                        🗑 Eliminar producto
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="detail-info">
+
+                ${infoDetalle(
+                    "Proveedor",
+                    p.proveedor
+                )}
+
+                ${infoDetalle(
+                    "Unidad",
+                    p.unidad
+                )}
+
+                ${infoDetalle(
+                    "Dosis recomendada",
+                    p.dosis || "—"
+                )}
+
+                ${infoDetalle(
+                    "Aviso bajo stock",
+                    numero(p.bajoStock) > 0
+                        ? formatoNumero(p.bajoStock)
+                            + " "
+                            + p.unidad
+                        : "Desactivado"
+                )}
+
+            </div>
+
+
+            <div class="info-box">
+
+                <span>
+                    Características
+                </span>
+
+
+                <div class="characteristics">
+
+                    ${escapar(
+                        p.caracteristicas ||
+                        "Sin características indicadas."
+                    )}
+
+                </div>
+
+            </div>
+
+
+            <div class="section-head">
+
+                <h3>
+
+                    📦 Lotes
+                    (${p.lotes.length})
+
+                    · Stock
+                    ${formatoNumero(stock)}
+                    ${escapar(p.unidad)}
+
+                </h3>
+
+
+                <button
+                    class="btn primary"
+                    data-action="add-lot"
+                    data-pid="${p.id}"
+                >
+                    ＋ Nuevo lote
+                </button>
+
+            </div>
+
+
+            <div>
+
+                ${
+                    p.lotes.length
+                        ? p.lotes
+                            .map(function (l) {
+
+                                return cardLote(
+                                    p,
+                                    l
+                                );
+
+                            })
+                            .join("")
+                        : `
+                            <div class="empty">
+                                Este producto todavía
+                                no tiene lotes.
+                            </div>
+                        `
+                }
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+// ============================================================
+// INFO DETALLE
+// ============================================================
+
+function infoDetalle(nombre, valor) {
+
+    return `
+        <div class="info-box">
+
+            <span>
+                ${escapar(nombre)}
+            </span>
+
+            <b>
+                ${escapar(valor)}
+            </b>
+
+        </div>
+    `;
+
+}
+
+
+// ============================================================
+// TARJETA LOTE
+// ============================================================
+
+function cardLote(p, l) {
+
+    const movimientos =
+        movimientosLote(
+            p.id,
+            l.id
+        );
+
+
+    const inicial =
+        numero(l.cantidadInicial);
+
+
+    const entradas =
+        entradasLote(
+            p.id,
+            l.id
+        );
+
+
+    const consumo =
+        consumoLote(
+            p.id,
+            l.id
+        );
+
+
+    const stock =
+        stockLote(
+            p.id,
+            l.id
+        );
+
+
+    return `
+
+        <div class="lot-card">
+
+            <div class="lot-head">
+
+                <h4>
+                    Lote
+                    ${escapar(l.nombre)}
+                </h4>
+
+
+                <div>
+
+                    <button
+                        class="btn"
+                        data-action="edit-lot"
+                        data-pid="${p.id}"
+                        data-lid="${l.id}"
+                    >
+                        ✏ Editar
+                    </button>
+
+
+                    <button
+                        class="btn danger"
+                        data-action="delete-lot"
+                        data-pid="${p.id}"
+                        data-lid="${l.id}"
+                    >
+                        🗑 Eliminar
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="lot-body">
+
+
+                <div class="lot-stats">
+
+                    ${statLote(
+                        "Inicial",
+                        formatoNumero(inicial)
+                        + " "
+                        + p.unidad
+                    )}
+
+
+                    ${statLote(
+                        "Entradas",
+                        "+"
+                        + formatoNumero(entradas)
+                        + " "
+                        + p.unidad
+                    )}
+
+
+                    ${statLote(
+                        "Consumo",
+                        "-"
+                        + formatoNumero(consumo)
+                        + " "
+                        + p.unidad
+                    )}
+
+
+                    ${statLote(
+                        "Stock actual",
+                        formatoNumero(stock)
+                        + " "
+                        + p.unidad
+                    )}
+
+                </div>
+
+
+                <div class="lot-actions">
+
+                    <button
+                        class="btn primary"
+                        data-action="entry"
+                        data-pid="${p.id}"
+                        data-lid="${l.id}"
+                    >
+                        ＋ Dar entrada
+                    </button>
+
+
+                    <button
+                        class="btn"
+                        data-action="consume"
+                        data-pid="${p.id}"
+                        data-lid="${l.id}"
+                    >
+                        − Registrar consumo
+                    </button>
+
+                </div>
+
+
+                ${
+                    movimientos.length
+                        ? `
+                            <div
+                                class="table-card"
+                                style="margin-top:12px"
+                            >
+                                ${tablaMovimientos(
+                                    movimientos,
+                                    p
+                                )}
+                            </div>
+                        `
+                        : ""
+                }
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+// ============================================================
+// ESTADÍSTICA LOTE
+// ============================================================
+
+function statLote(nombre, valor) {
+
+    return `
+        <div class="lot-stat">
+
+            <span>
+                ${escapar(nombre)}
+            </span>
+
+            <b>
+                ${escapar(valor)}
+            </b>
+
+        </div>
+    `;
+
+}
+
+
+// ============================================================
+// TABLA MOVIMIENTOS
+// ============================================================
+
+function tablaMovimientos(
+    movimientos,
+    p
+) {
+
+    const ordenados =
+        movimientos
+            .slice()
             .sort(
-                (
-                    a,
-                    b
-                ) =>
-                    b.fecha.localeCompare(
-                        a.fecha
-                    )
+                function (a, b) {
+
+                    return String(b.fecha)
+                        .localeCompare(
+                            String(a.fecha)
+                        );
+
+                }
             );
 
 
-    renderTablaMovimientos(
-        contenedor,
-        movimientos
-    );
-}
-
-
-/* =========================================================
-   TABLA MOVIMIENTOS
-   ========================================================= */
-
-function renderTablaMovimientos(
-    contenedor,
-    movimientos
-) {
-
-    if (
-        movimientos.length ===
-        0
-    ) {
-
-        contenedor.innerHTML =
-            `<div class="empty-message">
-                No hay movimientos.
-            </div>`;
-
-        return;
-    }
-
-
-    contenedor.innerHTML = `
+    return `
 
         <table class="data-table">
 
@@ -3992,19 +2001,11 @@ function renderTablaMovimientos(
                     </th>
 
                     <th>
-                        Producto
-                    </th>
-
-                    <th>
-                        Lote
-                    </th>
-
-                    <th>
                         Cantidad
                     </th>
 
                     <th>
-                        Observaciones
+                        Descripción
                     </th>
 
                     <th>
@@ -4018,721 +2019,179 @@ function renderTablaMovimientos(
 
             <tbody>
 
-                ${movimientos.map(
-                    movimiento =>
-                        renderFilaMovimiento(
-                            movimiento
-                        )
-                ).join(
-                    ""
-                )}
+                ${
+                    ordenados.map(
+                        function (movimiento) {
+
+                            return `
+
+                                <tr>
+
+                                    <td>
+                                        ${escapar(
+                                            movimiento.fecha
+                                        )}
+                                    </td>
+
+
+                                    <td
+                                        class="${escapar(
+                                            movimiento.tipo
+                                        )}"
+                                    >
+
+                                        ${
+                                            movimiento.tipo ===
+                                            "entrada"
+                                                ? "ENTRADA"
+                                                : "CONSUMO"
+                                        }
+
+                                    </td>
+
+
+                                    <td>
+
+                                        ${
+                                            movimiento.tipo ===
+                                            "entrada"
+                                                ? "+"
+                                                : "-"
+                                        }
+
+                                        ${formatoNumero(
+                                            movimiento.cantidad
+                                        )}
+
+                                        ${escapar(
+                                            p.unidad
+                                        )}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        ${escapar(
+                                            movimiento.descripcion ||
+                                            ""
+                                        )}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <button
+                                            class="btn"
+                                            data-action="edit-movement"
+                                            data-pid="${p.id}"
+                                            data-lid="${movimiento.loteId}"
+                                            data-mid="${movimiento.id}"
+                                        >
+                                            ✏
+                                        </button>
+
+
+                                        <button
+                                            class="btn danger"
+                                            data-action="delete-movement"
+                                            data-mid="${movimiento.id}"
+                                        >
+                                            🗑
+                                        </button>
+
+                                    </td>
+
+                                </tr>
+
+                            `;
+
+                        }
+                    ).join("")
+                }
 
             </tbody>
 
         </table>
 
     `;
+
 }
 
 
-/* =========================================================
-   FILA MOVIMIENTO
-   ========================================================= */
+// ============================================================
+// MOSTRAR HISTORIAL
+// ============================================================
 
-function renderFilaMovimiento(
-    movimiento
-) {
+function mostrarHistorial() {
 
-    const producto =
-        obtenerProducto(
-            movimiento.productoId
-        );
+    if ($("viewClasses")) {
 
+        $("viewClasses")
+            .classList
+            .add("hidden");
 
-    const lote =
-        obtenerLote(
-            movimiento.productoId,
-            movimiento.loteId
-        );
-
-
-    return `
-
-        <tr>
-
-            <td>
-                ${formatearFecha(
-                    movimiento.fecha
-                )}
-            </td>
-
-
-            <td>
-
-                ${
-                    movimiento.tipo ===
-                    "entrada"
-
-                        ? `
-                            <span class="badge badge-entrada">
-                                Entrada
-                            </span>
-                          `
-
-                        : `
-                            <span class="badge badge-consumo">
-                                Consumo
-                            </span>
-                          `
-                }
-
-            </td>
-
-
-            <td>
-                ${escaparHTML(
-                    producto?.nombre ||
-                    "Producto eliminado"
-                )}
-            </td>
-
-
-            <td>
-                ${escaparHTML(
-                    lote?.nombre ||
-                    "Lote eliminado"
-                )}
-            </td>
-
-
-            <td>
-
-                <strong>
-                    ${formatearNumero(
-                        movimiento.cantidad
-                    )}
-                </strong>
-
-                ${escaparHTML(
-                    producto?.unidad ||
-                    ""
-                )}
-
-            </td>
-
-
-            <td>
-                ${escaparHTML(
-                    movimiento.observaciones ||
-                    "—"
-                )}
-            </td>
-
-
-            <td>
-
-                <div class="table-actions">
-
-                    <button
-                        type="button"
-                        class="btn btn-small btn-primary"
-                        data-action="editar-movimiento"
-                        data-id="${movimiento.id}"
-                    >
-                        Editar
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="btn btn-small btn-danger"
-                        data-action="eliminar-movimiento"
-                        data-id="${movimiento.id}"
-                    >
-                        Eliminar
-                    </button>
-
-                </div>
-
-            </td>
-
-        </tr>
-
-    `;
-}
-
-
-/* =========================================================
-   EDITAR MOVIMIENTO
-   ========================================================= */
-
-function editarMovimiento(
-    movimientoId
-) {
-
-    const movimiento =
-        datos.movimientos.find(
-            item =>
-                item.id ===
-                movimientoId
-        );
-
-
-    if (!movimiento) {
-
-        mostrarToast(
-            "Movimiento no encontrado.",
-            "error"
-        );
-
-        return;
     }
 
 
-    abrirModalMovimiento(
-        movimiento.tipo,
-        movimiento.productoId,
-        movimiento.loteId,
-        movimiento.id
-    );
+    if ($("viewProduct")) {
 
+        $("viewProduct")
+            .classList
+            .add("hidden");
 
-    document.getElementById(
-        "movimiento-cantidad"
-    ).value =
-        movimiento.cantidad;
-
-
-    document.getElementById(
-        "movimiento-fecha"
-    ).value =
-        movimiento.fecha;
-
-
-    document.getElementById(
-        "movimiento-observaciones"
-    ).value =
-        movimiento.observaciones;
-}
-
-
-/* =========================================================
-   ELIMINAR MOVIMIENTO
-   ========================================================= */
-
-function eliminarMovimiento(
-    movimientoId
-) {
-
-    const indice =
-        datos.movimientos.findIndex(
-            movimiento =>
-                movimiento.id ===
-                movimientoId
-        );
-
-
-    if (
-        indice ===
-        -1
-    ) {
-
-        return;
     }
 
 
-    const movimiento =
-        datos.movimientos[
-            indice
-        ];
+    if ($("viewHistory")) {
 
+        $("viewHistory")
+            .classList
+            .remove("hidden");
 
-    const producto =
-        obtenerProducto(
-            movimiento.productoId
-        );
-
-
-    const confirmar =
-        confirm(
-            "¿Quieres eliminar este movimiento?\n\n" +
-            (
-                producto
-                    ? producto.nombre
-                    : ""
-            ) +
-            "\nCantidad: " +
-            formatearNumero(
-                movimiento.cantidad
-            )
-        );
-
-
-    if (!confirmar) {
-
-        return;
     }
 
 
-    ultimoMovimientoEliminado = {
-
-        tipo:
-            "movimiento",
-
-        movimiento:
-            JSON.parse(
-                JSON.stringify(
-                    movimiento
-                )
-            ),
-
-        indice:
-            indice
-
-    };
-
-
-    datos.movimientos.splice(
-        indice,
-        1
-    );
-
-
-    guardarDatos();
-
-    actualizarTodo();
-
-
-    mostrarToast(
-        "Movimiento eliminado y stock recalculado.",
-        "warning"
-    );
-}
-
-
-/* =========================================================
-   ACCIONES MOVIMIENTOS
-   ========================================================= */
-
-function manejarAccionesMovimientos(
-    evento
-) {
-
-    const boton =
-        evento.target.closest(
-            "[data-action]"
-        );
-
-
-    if (!boton) {
-
-        return;
-    }
-
-
-    const accion =
-        boton.dataset.action;
-
-
-    const id =
-        boton.dataset.id;
-
-
-    if (
-        accion ===
-        "editar-movimiento"
-    ) {
-
-        editarMovimiento(
-            id
-        );
-    }
-
-
-    if (
-        accion ===
-        "eliminar-movimiento"
-    ) {
-
-        eliminarMovimiento(
-            id
-        );
-    }
-}
-
-
-/* =========================================================
-   HISTORIAL
-   ========================================================= */
-
-function renderHistorial() {
-
-    const contenedor =
-        document.getElementById(
-            "tabla-historial"
-        );
-
-
-    const busqueda =
-        normalizarTexto(
-            document.getElementById(
-                "historial-busqueda"
-            ).value
-        );
-
-
-    const productoFiltro =
-        document.getElementById(
-            "historial-filtro-producto"
-        ).value;
-
-
-    const tipoFiltro =
-        document.getElementById(
-            "historial-filtro-tipo"
-        ).value;
-
-
-    let movimientos =
-        [...datos.movimientos];
-
-
-    movimientos =
-        movimientos.filter(
-            movimiento => {
-
-                if (
-                    productoFiltro &&
-                    movimiento.productoId !==
-                    productoFiltro
-                ) {
-
-                    return false;
-                }
-
-
-                if (
-                    tipoFiltro &&
-                    movimiento.tipo !==
-                    tipoFiltro
-                ) {
-
-                    return false;
-                }
-
-
-                const producto =
-                    obtenerProducto(
-                        movimiento.productoId
-                    );
-
-
-                const lote =
-                    obtenerLote(
-                        movimiento.productoId,
-                        movimiento.loteId
-                    );
-
-
-                const texto =
-                    normalizarTexto(
-                        [
-                            producto?.nombre,
-                            producto?.proveedor,
-                            lote?.nombre,
-                            movimiento.observaciones
-                        ].join(
-                            " "
-                        )
-                    );
-
-
-                if (
-                    busqueda &&
-                    !texto.includes(
-                        busqueda
-                    )
-                ) {
-
-                    return false;
-                }
-
-
-                return true;
-
-            }
-        )
-        .sort(
-            (
-                a,
-                b
-            ) =>
-                b.fecha.localeCompare(
-                    a.fecha
-                )
-        );
-
-
-    renderTablaMovimientos(
-        contenedor,
-        movimientos
-    );
-}
-
-
-/* =========================================================
-   INICIO
-   ========================================================= */
-
-function renderInicio() {
-
-    const productos =
-        datos.productos.length;
-
-
-    const lotes =
-        datos.productos.reduce(
-            (
-                total,
-                producto
-            ) =>
-                total +
-                producto.lotes.length,
-            0
-        );
-
-
-    const entradas =
-        datos.movimientos.filter(
-            movimiento =>
-                movimiento.tipo ===
-                "entrada"
-        ).length;
-
-
-    const consumos =
-        datos.movimientos.filter(
-            movimiento =>
-                movimiento.tipo ===
-                "consumo"
-        ).length;
-
-
-    const stockBajo =
-        datos.productos.filter(
-            producto =>
-                calcularStockProducto(
-                    producto.id
-                ) <=
-                numeroSeguro(
-                    producto.stockMinimo
-                )
-        ).length;
-
-
-    document.getElementById(
-        "stat-productos"
-    ).textContent =
-        productos;
-
-
-    document.getElementById(
-        "stat-lotes"
-    ).textContent =
-        lotes;
-
-
-    document.getElementById(
-        "stat-entradas"
-    ).textContent =
-        entradas;
-
-
-    document.getElementById(
-        "stat-consumos"
-    ).textContent =
-        consumos;
-
-
-    document.getElementById(
-        "stat-stock-bajo"
-    ).textContent =
-        stockBajo;
-
-
-    renderAvisosStock();
-
-    renderUltimosMovimientos();
-}
-
-
-/* =========================================================
-   AVISOS STOCK
-   ========================================================= */
-
-function renderAvisosStock() {
-
-    const contenedor =
-        document.getElementById(
-            "avisos-stock"
-        );
-
-
-    const productos =
-        datos.productos.filter(
-            producto =>
-                calcularStockProducto(
-                    producto.id
-                ) <=
-                numeroSeguro(
-                    producto.stockMinimo
-                )
-        );
-
-
-    if (
-        productos.length ===
-        0
-    ) {
-
-        contenedor.innerHTML =
-            `<div class="empty-message">
-                ✓ No hay productos con stock bajo.
-            </div>`;
-
-        return;
-    }
-
-
-    contenedor.innerHTML =
-        productos.map(
-            producto => {
-
-                const stock =
-                    calcularStockProducto(
-                        producto.id
-                    );
-
-
-                const minimo =
-                    numeroSeguro(
-                        producto.stockMinimo
-                    );
-
-
-                return `
-
-                    <div class="notice warning">
-
-                        <div>
-
-                            <strong>
-                                ${escaparHTML(
-                                    producto.nombre
-                                )}
-                            </strong>
-
-                            <span>
-                                Stock:
-                                ${formatearNumero(
-                                    stock
-                                )}
-                                ${escaparHTML(
-                                    producto.unidad
-                                )}
-                                · Mínimo:
-                                ${formatearNumero(
-                                    minimo
-                                )}
-                            </span>
-
-                        </div>
-
-
-                        <button
-                            type="button"
-                            class="btn btn-small btn-danger"
-                            data-action="consumo"
-                            data-producto="${producto.id}"
-                        >
-                            Registrar consumo
-                        </button>
-
-                    </div>
-
-                `;
-
-            }
-        ).join(
-            ""
-        );
-
-
-    contenedor.querySelectorAll(
-        "[data-action='consumo']"
-    ).forEach(
-        boton => {
-
-            boton.addEventListener(
-                "click",
-                () => {
-
-                    abrirModalMovimiento(
-                        "consumo",
-                        boton.dataset.producto
-                    );
-
-                }
-            );
-        }
-    );
-}
-
-
-/* =========================================================
-   ÚLTIMOS MOVIMIENTOS
-   ========================================================= */
-
-function renderUltimosMovimientos() {
-
-    const contenedor =
-        document.getElementById(
-            "inicio-ultimos-movimientos"
-        );
+    renderNav();
 
 
     const movimientos =
-        [...datos.movimientos]
+        datos.movimientos
+            .slice()
             .sort(
-                (
-                    a,
-                    b
-                ) =>
-                    b.fecha.localeCompare(
-                        a.fecha
-                    )
-            )
-            .slice(
-                0,
-                8
+                function (a, b) {
+
+                    return String(b.fecha)
+                        .localeCompare(
+                            String(a.fecha)
+                        );
+
+                }
             );
 
 
-    if (
-        movimientos.length ===
-        0
-    ) {
+    const tabla =
+        $("historyTable");
 
-        contenedor.innerHTML =
-            `<div class="empty-message">
-                Todavía no hay movimientos.
-            </div>`;
+
+    if (!tabla) return;
+
+
+    if (!movimientos.length) {
+
+        tabla.innerHTML = `
+            <div class="empty">
+                No hay movimientos registrados.
+            </div>
+        `;
 
         return;
+
     }
 
 
-    contenedor.innerHTML = `
+    tabla.innerHTML = `
 
         <table class="data-table">
 
@@ -4745,10 +2204,6 @@ function renderUltimosMovimientos() {
                     </th>
 
                     <th>
-                        Tipo
-                    </th>
-
-                    <th>
                         Producto
                     </th>
 
@@ -4757,7 +2212,19 @@ function renderUltimosMovimientos() {
                     </th>
 
                     <th>
+                        Tipo
+                    </th>
+
+                    <th>
                         Cantidad
+                    </th>
+
+                    <th>
+                        Descripción
+                    </th>
+
+                    <th>
+                        Acciones
                     </th>
 
                 </tr>
@@ -4767,263 +2234,2002 @@ function renderUltimosMovimientos() {
 
             <tbody>
 
-                ${movimientos.map(
-                    movimiento => {
+                ${
+                    movimientos.map(
+                        function (movimiento) {
 
-                        const producto =
-                            obtenerProducto(
-                                movimiento.productoId
-                            );
-
-
-                        const lote =
-                            obtenerLote(
-                                movimiento.productoId,
-                                movimiento.loteId
-                            );
+                            const p =
+                                producto(
+                                    movimiento.productoId
+                                );
 
 
-                        return `
-
-                            <tr>
-
-                                <td>
-                                    ${formatearFecha(
-                                        movimiento.fecha
-                                    )}
-                                </td>
+                            const l =
+                                p
+                                    ? lote(
+                                        p.id,
+                                        movimiento.loteId
+                                    )
+                                    : null;
 
 
-                                <td>
+                            return `
 
-                                    ${
-                                        movimiento.tipo ===
-                                        "entrada"
+                                <tr>
 
-                                            ? `
-                                                <span class="badge badge-entrada">
-                                                    Entrada
-                                                </span>
-                                              `
-
-                                            : `
-                                                <span class="badge badge-consumo">
-                                                    Consumo
-                                                </span>
-                                              `
-                                    }
-
-                                </td>
+                                    <td>
+                                        ${escapar(
+                                            movimiento.fecha
+                                        )}
+                                    </td>
 
 
-                                <td>
-                                    ${escaparHTML(
-                                        producto?.nombre ||
-                                        "—"
-                                    )}
-                                </td>
+                                    <td>
+
+                                        ${escapar(
+                                            p?.nombre ||
+                                            "Producto eliminado"
+                                        )}
+
+                                    </td>
 
 
-                                <td>
-                                    ${escaparHTML(
-                                        lote?.nombre ||
-                                        "—"
-                                    )}
-                                </td>
+                                    <td>
+
+                                        ${escapar(
+                                            l?.nombre ||
+                                            "—"
+                                        )}
+
+                                    </td>
 
 
-                                <td>
-                                    ${formatearNumero(
-                                        movimiento.cantidad
-                                    )}
-                                    ${escaparHTML(
-                                        producto?.unidad ||
-                                        ""
-                                    )}
-                                </td>
+                                    <td
+                                        class="${escapar(
+                                            movimiento.tipo
+                                        )}"
+                                    >
 
-                            </tr>
+                                        ${
+                                            movimiento.tipo ===
+                                            "entrada"
+                                                ? "ENTRADA"
+                                                : "CONSUMO"
+                                        }
 
-                        `;
+                                    </td>
 
-                    }
-                ).join(
-                    ""
-                )}
+
+                                    <td>
+
+                                        ${
+                                            movimiento.tipo ===
+                                            "entrada"
+                                                ? "+"
+                                                : "-"
+                                        }
+
+                                        ${formatoNumero(
+                                            movimiento.cantidad
+                                        )}
+
+                                        ${escapar(
+                                            p?.unidad ||
+                                            ""
+                                        )}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        ${escapar(
+                                            movimiento.descripcion ||
+                                            ""
+                                        )}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        ${
+                                            p && l
+                                                ? `
+                                                    <button
+                                                        class="btn"
+                                                        data-action="edit-movement"
+                                                        data-pid="${p.id}"
+                                                        data-lid="${l.id}"
+                                                        data-mid="${movimiento.id}"
+                                                    >
+                                                        ✏
+                                                    </button>
+                                                `
+                                                : ""
+                                        }
+
+
+                                        <button
+                                            class="btn danger"
+                                            data-action="delete-movement"
+                                            data-mid="${movimiento.id}"
+                                        >
+                                            🗑
+                                        </button>
+
+                                    </td>
+
+                                </tr>
+
+                            `;
+
+                        }
+                    ).join("")
+                }
 
             </tbody>
 
         </table>
 
     `;
+
 }
 
 
-/* =========================================================
-   LIMPIAR FILTROS
-   ========================================================= */
+// ============================================================
+// ABRIR MODAL PRODUCTO
+// ============================================================
 
-function limpiarFiltros() {
-
-    document.getElementById(
-        "buscar-productos"
-    ).value =
-        "";
-
-
-    document.getElementById(
-        "filtro-clase"
-    ).value =
-        "";
-
-
-    document.getElementById(
-        "filtro-stock"
-    ).value =
-        "";
-
-
-    renderProductos();
-}
-
-
-/* =========================================================
-   ABRIR MODAL
-   ========================================================= */
-
-function abrirModal(
-    id
-) {
+function abrirProducto(productoId = null) {
 
     const modal =
-        document.getElementById(
-            id
-        );
+        $("modal");
 
 
-    if (
-        modal
-    ) {
+    if (!modal) return;
 
-        modal.classList.add(
-            "show"
-        );
+
+    modal.classList.remove("hidden");
+
+
+    $("modalTitle").textContent =
+        productoId
+            ? "Editar producto"
+            : "Nuevo producto";
+
+
+    $("productId").value =
+        productoId || "";
+
+
+    if (productoId) {
+
+        const p =
+            producto(productoId);
+
+
+        if (!p) return;
+
+
+        $("fNombre").value =
+            p.nombre || "";
+
+
+        $("fProveedor").value =
+            p.proveedor || PROVEEDORES[0];
+
+
+        $("fClase").value =
+            p.clase || CLASES[0];
+
+
+        $("fUnidad").value =
+            p.unidad || "Kg";
+
+
+        $("fDosis").value =
+            p.dosis || "";
+
+
+        $("fBajoStock").value =
+            numero(p.bajoStock);
+
+
+        $("fCaracteristicas").value =
+            p.caracteristicas || "";
+
+
+    } else {
+
+        $("productForm").reset();
+
+
+        $("fProveedor").value =
+            PROVEEDORES[0];
+
+
+        $("fClase").value =
+            CLASES.includes(claseActual)
+                ? claseActual
+                : CLASES[0];
+
+
+        $("fUnidad").value =
+            "Kg";
+
+
+        $("fBajoStock").value =
+            0;
+
     }
+
 }
 
 
-/* =========================================================
-   CERRAR MODAL
-   ========================================================= */
+// ============================================================
+// GUARDAR PRODUCTO
+// ============================================================
 
-function cerrarModal(
-    id
-) {
+function guardarProducto(evento) {
 
-    const modal =
-        document.getElementById(
-            id
+    evento.preventDefault();
+
+
+    const id =
+        $("productId").value;
+
+
+    const nuevoProducto = {
+
+        nombre:
+            $("fNombre")
+                .value
+                .trim(),
+
+        proveedor:
+            $("fProveedor")
+                .value,
+
+        clase:
+            $("fClase")
+                .value,
+
+        unidad:
+            $("fUnidad")
+                .value,
+
+        dosis:
+            $("fDosis")
+                .value
+                .trim(),
+
+        bajoStock:
+            numero(
+                $("fBajoStock")
+                    .value
+            ),
+
+        caracteristicas:
+            $("fCaracteristicas")
+                .value
+                .trim()
+
+    };
+
+
+    if (!nuevoProducto.nombre) {
+
+        alert(
+            "Indica el nombre del producto."
         );
 
+        return;
 
-    if (
-        modal
-    ) {
-
-        modal.classList.remove(
-            "show"
-        );
     }
+
+
+    if (id) {
+
+        const p =
+            producto(id);
+
+
+        if (!p) return;
+
+
+        Object.assign(
+            p,
+            nuevoProducto
+        );
+
+
+        guardar();
+
+        cerrarModalProducto();
+
+        toast(
+            "Producto actualizado."
+        );
+
+
+        mostrarProducto(id);
+
+
+    } else {
+
+        nuevoProducto.id =
+            uid("p");
+
+
+        nuevoProducto.lotes = [];
+
+
+        datos.productos.push(
+            nuevoProducto
+        );
+
+
+        guardar();
+
+        cerrarModalProducto();
+
+        toast(
+            "Producto creado."
+        );
+
+
+        claseActual =
+            nuevoProducto.clase;
+
+
+        mostrarClase();
+
+    }
+
 }
 
 
-/* =========================================================
-   EXPORTAR JSON
-   ========================================================= */
+// ============================================================
+// ELIMINAR PRODUCTO
+// ============================================================
 
-function exportarJSON() {
+function eliminarProducto(productoId) {
 
-    const copia =
-        JSON.stringify(
-            datos,
-            null,
-            2
+    const p =
+        producto(productoId);
+
+
+    if (!p) return;
+
+
+    const confirmado =
+        confirm(
+            `¿Eliminar "${p.nombre}"?\n\n` +
+            `Se eliminarán también todos sus lotes ` +
+            `y movimientos.\n\n` +
+            `Esta acción no se puede deshacer.`
         );
 
 
-    const blob =
-        new Blob(
-            [
-                copia
-            ],
-            {
-                type:
-                    "application/json;charset=utf-8"
+    if (!confirmado) return;
+
+
+    datos.productos =
+        datos.productos.filter(
+            function (productoActual) {
+
+                return (
+                    productoActual.id !==
+                    productoId
+                );
+
             }
         );
 
 
-    const url =
-        URL.createObjectURL(
-            blob
+    datos.movimientos =
+        datos.movimientos.filter(
+            function (movimiento) {
+
+                return (
+                    movimiento.productoId !==
+                    productoId
+                );
+
+            }
         );
 
 
-    const enlace =
-        document.createElement(
-            "a"
-        );
+    guardar();
 
 
-    enlace.href =
-        url;
-
-
-    enlace.download =
-        "productos_enologicos_" +
-        fechaHoy() +
-        ".json";
-
-
-    document.body.appendChild(
-        enlace
+    toast(
+        "Producto eliminado."
     );
 
 
-    enlace.click();
+    mostrarClase();
 
-
-    enlace.remove();
-
-
-    URL.revokeObjectURL(
-        url
-    );
-
-
-    mostrarToast(
-        "Copia JSON exportada correctamente.",
-        "success"
-    );
 }
 
 
-/* =========================================================
-   IMPORTAR JSON
-   ========================================================= */
+// ============================================================
+// ABRIR MODAL LOTE
+// ============================================================
 
-function importarJSON(
-    evento
+function abrirLote(
+    productoId,
+    loteId = null
 ) {
 
-    const archivo =
-        evento.target.files?.[0];
+    const p =
+        producto(productoId);
 
 
-    if (!archivo) {
+    if (!p) return;
+
+
+    $("lotModal")
+        .classList
+        .remove("hidden");
+
+
+    $("lotProductId").value =
+        productoId;
+
+
+    $("lotId").value =
+        loteId || "";
+
+
+    $("lotModalTitle").textContent =
+        loteId
+            ? "Editar lote"
+            : "Nuevo lote";
+
+
+    if (loteId) {
+
+        const l =
+            lote(
+                productoId,
+                loteId
+            );
+
+
+        if (!l) return;
+
+
+        $("lotNombre").value =
+            l.nombre || "";
+
+
+        $("lotCantidad").value =
+            numero(
+                l.cantidadInicial
+            );
+
+    } else {
+
+        $("lotForm").reset();
+
+
+        $("lotProductId").value =
+            productoId;
+
+
+        $("lotId").value =
+            "";
+
+    }
+
+}
+
+
+// ============================================================
+// GUARDAR LOTE
+// ============================================================
+
+function guardarLote(evento) {
+
+    evento.preventDefault();
+
+
+    const productoId =
+        $("lotProductId").value;
+
+
+    const loteId =
+        $("lotId").value;
+
+
+    const p =
+        producto(productoId);
+
+
+    if (!p) return;
+
+
+    const nombre =
+        $("lotNombre")
+            .value
+            .trim();
+
+
+    const cantidad =
+        numero(
+            $("lotCantidad")
+                .value
+        );
+
+
+    if (!nombre) {
+
+        alert(
+            "Indica el número o nombre del lote."
+        );
 
         return;
+
     }
+
+
+    if (cantidad < 0) {
+
+        alert(
+            "La cantidad inicial no puede ser negativa."
+        );
+
+        return;
+
+    }
+
+
+    if (loteId) {
+
+        const l =
+            lote(
+                productoId,
+                loteId
+            );
+
+
+        if (!l) return;
+
+
+        l.nombre =
+            nombre;
+
+
+        l.cantidadInicial =
+            cantidad;
+
+
+        guardar();
+
+        $("lotModal")
+            .classList
+            .add("hidden");
+
+
+        toast(
+            "Lote actualizado."
+        );
+
+
+        mostrarProducto(
+            productoId
+        );
+
+
+    } else {
+
+        p.lotes.push({
+
+            id: uid("l"),
+
+            nombre: nombre,
+
+            cantidadInicial:
+                cantidad
+
+        });
+
+
+        guardar();
+
+        $("lotModal")
+            .classList
+            .add("hidden");
+
+
+        toast(
+            "Lote creado."
+        );
+
+
+        mostrarProducto(
+            productoId
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// ELIMINAR LOTE
+// ============================================================
+
+function eliminarLote(
+    productoId,
+    loteId
+) {
+
+    const p =
+        producto(productoId);
+
+
+    const l =
+        lote(
+            productoId,
+            loteId
+        );
+
+
+    if (!p || !l) return;
+
+
+    const confirmado =
+        confirm(
+            `¿Eliminar el lote "${l.nombre}" ` +
+            `de "${p.nombre}"?\n\n` +
+
+            `Se eliminará únicamente este lote ` +
+            `y sus movimientos.\n\n` +
+
+            `El producto y los demás lotes ` +
+            `permanecerán.`
+        );
+
+
+    if (!confirmado) return;
+
+
+    p.lotes =
+        p.lotes.filter(
+            function (loteActual) {
+
+                return (
+                    loteActual.id !==
+                    loteId
+                );
+
+            }
+        );
+
+
+    datos.movimientos =
+        datos.movimientos.filter(
+            function (movimiento) {
+
+                return !(
+                    movimiento.productoId ===
+                    productoId &&
+
+                    movimiento.loteId ===
+                    loteId
+                );
+
+            }
+        );
+
+
+    guardar();
+
+
+    toast(
+        "Lote eliminado."
+    );
+
+
+    mostrarProducto(
+        productoId
+    );
+
+}
+
+
+// ============================================================
+// ABRIR MOVIMIENTO
+// ============================================================
+
+function abrirMovimiento(
+    productoId,
+    loteId,
+    tipo = null,
+    movimientoId = null
+) {
+
+    const p =
+        producto(productoId);
+
+
+    const l =
+        lote(
+            productoId,
+            loteId
+        );
+
+
+    if (!p || !l) return;
+
+
+    $("movementModal")
+        .classList
+        .remove("hidden");
+
+
+    $("movementId").value =
+        movimientoId || "";
+
+
+    $("movementProductId").value =
+        productoId;
+
+
+    $("movementLotId").value =
+        loteId;
+
+
+    if (movimientoId) {
+
+        const movimiento =
+            datos.movimientos.find(
+                function (m) {
+
+                    return (
+                        m.id ===
+                        movimientoId
+                    );
+
+                }
+            );
+
+
+        if (!movimiento) return;
+
+
+        $("movementModalTitle")
+            .textContent =
+            "Editar movimiento";
+
+
+        $("movementTipo").value =
+            movimiento.tipo;
+
+
+        $("movementCantidad").value =
+            numero(
+                movimiento.cantidad
+            );
+
+
+        $("movementFecha").value =
+            movimiento.fecha ||
+            hoy();
+
+
+        $("movementDescripcion").value =
+            movimiento.descripcion ||
+            "";
+
+
+    } else {
+
+        $("movementModalTitle")
+            .textContent =
+            tipo === "entrada"
+                ? "Nueva entrada"
+                : "Nuevo consumo";
+
+
+        $("movementForm").reset();
+
+
+        $("movementId").value =
+            "";
+
+
+        $("movementProductId").value =
+            productoId;
+
+
+        $("movementLotId").value =
+            loteId;
+
+
+        $("movementTipo").value =
+            tipo || "consumo";
+
+
+        $("movementCantidad").value =
+            "";
+
+
+        $("movementFecha").value =
+            hoy();
+
+
+        $("movementDescripcion").value =
+            "";
+
+    }
+
+}
+
+
+// ============================================================
+// GUARDAR MOVIMIENTO
+// ============================================================
+
+function guardarMovimiento(evento) {
+
+    evento.preventDefault();
+
+
+    const movimientoId =
+        $("movementId").value;
+
+
+    const productoId =
+        $("movementProductId").value;
+
+
+    const loteId =
+        $("movementLotId").value;
+
+
+    const tipo =
+        $("movementTipo").value;
+
+
+    const cantidad =
+        numero(
+            $("movementCantidad")
+                .value
+        );
+
+
+    const fecha =
+        $("movementFecha")
+            .value ||
+        hoy();
+
+
+    const descripcion =
+        $("movementDescripcion")
+            .value
+            .trim();
+
+
+    if (cantidad <= 0) {
+
+        alert(
+            "La cantidad debe ser mayor que cero."
+        );
+
+        return;
+
+    }
+
+
+    const stockActual =
+        stockLote(
+            productoId,
+            loteId
+        );
+
+
+    // --------------------------------------------------------
+    // COMPROBACIÓN DE CONSUMO
+    // --------------------------------------------------------
+
+    if (
+        tipo === "consumo" &&
+        !movimientoId &&
+        cantidad > stockActual
+    ) {
+
+        const continuar =
+            confirm(
+                `El consumo indicado es de ` +
+                `${formatoNumero(cantidad)}.\n\n` +
+
+                `El stock actual del lote es ` +
+                `${formatoNumero(stockActual)}.\n\n` +
+
+                `El consumo dejaría el stock en negativo.\n\n` +
+
+                `¿Quieres registrarlo de todas formas?`
+            );
+
+
+        if (!continuar) {
+
+            return;
+
+        }
+
+    }
+
+
+    const nuevoMovimiento = {
+
+        id:
+            movimientoId ||
+            uid("m"),
+
+        productoId:
+            productoId,
+
+        loteId:
+            loteId,
+
+        tipo:
+            tipo === "entrada"
+                ? "entrada"
+                : "consumo",
+
+        cantidad:
+            cantidad,
+
+        fecha:
+            fecha,
+
+        descripcion:
+            descripcion
+
+    };
+
+
+    if (movimientoId) {
+
+        const movimiento =
+            datos.movimientos.find(
+                function (m) {
+
+                    return (
+                        m.id ===
+                        movimientoId
+                    );
+
+                }
+            );
+
+
+        if (!movimiento) {
+
+            alert(
+                "No se encontró el movimiento."
+            );
+
+            return;
+
+        }
+
+
+        // ----------------------------------------------------
+        // AL EDITAR UN CONSUMO
+        // ----------------------------------------------------
+        //
+        // Se comprueba el stock que quedaría
+        // sin contar el movimiento antiguo.
+        // ----------------------------------------------------
+
+        const stockSinMovimiento =
+            calcularStockSinMovimiento(
+                productoId,
+                loteId,
+                movimientoId
+            );
+
+
+        if (
+            nuevoMovimiento.tipo ===
+            "consumo" &&
+
+            cantidad >
+            stockSinMovimiento
+        ) {
+
+            const continuar =
+                confirm(
+                    `El nuevo consumo es de ` +
+                    `${formatoNumero(cantidad)}.\n\n` +
+
+                    `El stock disponible sin contar ` +
+                    `este movimiento es ` +
+                    `${formatoNumero(stockSinMovimiento)}.\n\n` +
+
+                    `El stock quedaría negativo.\n\n` +
+
+                    `¿Quieres continuar?`
+                );
+
+
+            if (!continuar) {
+
+                return;
+
+            }
+
+        }
+
+
+        Object.assign(
+            movimiento,
+            nuevoMovimiento
+        );
+
+
+        toast(
+            "Movimiento actualizado."
+        );
+
+
+    } else {
+
+        datos.movimientos.push(
+            nuevoMovimiento
+        );
+
+
+        if (
+            nuevoMovimiento.tipo ===
+            "entrada"
+        ) {
+
+            toast(
+                "Entrada registrada."
+            );
+
+        } else {
+
+            toast(
+                "Consumo registrado."
+            );
+
+        }
+
+    }
+
+
+    guardar();
+
+
+    $("movementModal")
+        .classList
+        .add("hidden");
+
+
+    mostrarProducto(
+        productoId
+    );
+
+}
+
+
+// ============================================================
+// STOCK SIN UN MOVIMIENTO
+// ============================================================
+
+function calcularStockSinMovimiento(
+    productoId,
+    loteId,
+    movimientoId
+) {
+
+    const l =
+        lote(
+            productoId,
+            loteId
+        );
+
+
+    if (!l) return 0;
+
+
+    let stock =
+        numero(
+            l.cantidadInicial
+        );
+
+
+    datos.movimientos.forEach(
+        function (movimiento) {
+
+            if (
+                movimiento.productoId !==
+                productoId
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                movimiento.loteId !==
+                loteId
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                movimiento.id ===
+                movimientoId
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                movimiento.tipo ===
+                "entrada"
+            ) {
+
+                stock +=
+                    numero(
+                        movimiento.cantidad
+                    );
+
+            } else {
+
+                stock -=
+                    numero(
+                        movimiento.cantidad
+                    );
+
+            }
+
+        }
+    );
+
+
+    return stock;
+
+}
+
+
+// ============================================================
+// ELIMINAR MOVIMIENTO
+// ============================================================
+
+function eliminarMovimiento(
+    movimientoId
+) {
+
+    const movimiento =
+        datos.movimientos.find(
+            function (m) {
+
+                return (
+                    m.id ===
+                    movimientoId
+                );
+
+            }
+        );
+
+
+    if (!movimiento) return;
+
+
+    const confirmado =
+        confirm(
+            "¿Eliminar este movimiento?\n\n" +
+
+            "El stock se recalculará " +
+            "automáticamente."
+        );
+
+
+    if (!confirmado) return;
+
+
+    datos.movimientos =
+        datos.movimientos.filter(
+            function (m) {
+
+                return (
+                    m.id !==
+                    movimientoId
+                );
+
+            }
+        );
+
+
+    guardar();
+
+
+    toast(
+        "Movimiento eliminado."
+    );
+
+
+    if (
+        claseActual ===
+        "__historial"
+    ) {
+
+        mostrarHistorial();
+
+    } else {
+
+        const p =
+            producto(
+                movimiento.productoId
+            );
+
+
+        if (p) {
+
+            mostrarProducto(
+                p.id
+            );
+
+        } else {
+
+            mostrarClase();
+
+        }
+
+    }
+
+}
+
+
+// ============================================================
+// LIMPIAR MOVIMIENTOS E HISTORIAL
+// ============================================================
+//
+// IMPORTANTE:
+// - NO elimina productos.
+// - NO elimina lotes.
+// - NO cambia el stock actual.
+// - Convierte el stock actual de cada lote
+//   en su nueva cantidad inicial.
+// - Después elimina todos los movimientos.
+// ============================================================
+
+function limpiarHistorial() {
+
+    if (!datos.movimientos.length) {
+
+        alert(
+            "No hay movimientos que limpiar."
+        );
+
+        return;
+
+    }
+
+
+    const confirmado =
+        confirm(
+            "Se borrarán TODOS los movimientos " +
+            "e historial.\n\n" +
+
+            "El stock actual de cada lote " +
+            "se conservará como nueva cantidad inicial.\n\n" +
+
+            "Los productos y los lotes NO se eliminarán.\n\n" +
+
+            "¿Continuar?"
+        );
+
+
+    if (!confirmado) return;
+
+
+    // Primero calculamos el stock de cada lote
+    // antes de eliminar los movimientos.
+
+    datos.productos.forEach(
+        function (p) {
+
+            p.lotes.forEach(
+                function (l) {
+
+                    const stockActual =
+                        stockLote(
+                            p.id,
+                            l.id
+                        );
+
+
+                    l.cantidadInicial =
+                        stockActual;
+
+                }
+            );
+
+        }
+    );
+
+
+    // Ahora sí eliminamos todos
+    // los movimientos.
+
+    datos.movimientos = [];
+
+
+    guardar();
+
+
+    toast(
+        "Historial limpiado y stock conservado."
+    );
+
+
+    mostrarHistorial();
+
+}
+
+
+// ============================================================
+// CERRAR MODALES
+// ============================================================
+
+function cerrarModales() {
+
+    if ($("modal")) {
+
+        $("modal")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("lotModal")) {
+
+        $("lotModal")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("movementModal")) {
+
+        $("movementModal")
+            .classList
+            .add("hidden");
+
+    }
+
+}
+
+
+function cerrarModalProducto() {
+
+    if ($("modal")) {
+
+        $("modal")
+            .classList
+            .add("hidden");
+
+    }
+
+}
+
+
+function prepararCierres() {
+
+    document
+        .querySelectorAll(
+            "[data-close-modal]"
+        )
+        .forEach(
+            function (boton) {
+
+                boton.onclick =
+                    cerrarModalProducto;
+
+            }
+        );
+
+
+    document
+        .querySelectorAll(
+            "[data-close-lot-modal]"
+        )
+        .forEach(
+            function (boton) {
+
+                boton.onclick =
+                    function () {
+
+                        $("lotModal")
+                            .classList
+                            .add("hidden");
+
+                    };
+
+            }
+        );
+
+
+    document
+        .querySelectorAll(
+            "[data-close-movement-modal]"
+        )
+        .forEach(
+            function (boton) {
+
+                boton.onclick =
+                    function () {
+
+                        $("movementModal")
+                            .classList
+                            .add("hidden");
+
+                    };
+
+            }
+        );
+
+
+    // Cerrar al pulsar fuera del contenido
+
+    document.addEventListener(
+        "click",
+        function (evento) {
+
+            if (
+                evento.target ===
+                $("modal")
+            ) {
+
+                $("modal")
+                    .classList
+                    .add("hidden");
+
+            }
+
+
+            if (
+                evento.target ===
+                $("lotModal")
+            ) {
+
+                $("lotModal")
+                    .classList
+                    .add("hidden");
+
+            }
+
+
+            if (
+                evento.target ===
+                $("movementModal")
+            ) {
+
+                $("movementModal")
+                    .classList
+                    .add("hidden");
+
+            }
+
+        }
+    );
+
+
+    // ESC para cerrar
+
+    document.addEventListener(
+        "keydown",
+        function (evento) {
+
+            if (
+                evento.key ===
+                "Escape"
+            ) {
+
+                cerrarModales();
+
+            }
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// EXPORTAR JSON
+// ============================================================
+
+function exportJSON() {
+
+    try {
+
+        const contenido =
+            JSON.stringify(
+                datos,
+                null,
+                2
+            );
+
+
+        const blob =
+            new Blob(
+                [contenido],
+                {
+                    type:
+                        "application/json;charset=utf-8"
+                }
+            );
+
+
+        const url =
+            URL.createObjectURL(
+                blob
+            );
+
+
+        const enlace =
+            document.createElement("a");
+
+
+        enlace.href =
+            url;
+
+
+        enlace.download =
+            "stock-enologico-backup.json";
+
+
+        document.body.appendChild(
+            enlace
+        );
+
+
+        enlace.click();
+
+
+        document.body.removeChild(
+            enlace
+        );
+
+
+        URL.revokeObjectURL(
+            url
+        );
+
+
+        toast(
+            "JSON exportado correctamente."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error exportando JSON:",
+            error
+        );
+
+
+        alert(
+            "No se pudo exportar el JSON."
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// NORMALIZAR JSON IMPORTADO
+// ============================================================
+
+function normalizarImportacion(
+    datosImportados
+) {
+
+    if (
+        !datosImportados ||
+        !Array.isArray(
+            datosImportados.productos
+        )
+    ) {
+
+        throw new Error(
+            "El JSON no contiene una lista válida de productos."
+        );
+
+    }
+
+
+    const salida = {
+
+        version: 1,
+
+        productos: [],
+
+        movimientos:
+            Array.isArray(
+                datosImportados.movimientos
+            )
+                ? datosImportados.movimientos
+                : []
+
+    };
+
+
+    datosImportados.productos.forEach(
+        function (p, indice) {
+
+            if (
+                !p ||
+                typeof p !== "object"
+            ) {
+
+                return;
+
+            }
+
+
+            let proveedor =
+                p.proveedor ||
+                "VIDEYNOL";
+
+
+            // Compatibilidad con el JSON anterior
+            if (
+                proveedor ===
+                "VIDYENOL"
+            ) {
+
+                proveedor =
+                    "VIDEYNOL";
+
+            }
+
+
+            if (
+                proveedor ===
+                'VASON "OENOBRANDS"'
+            ) {
+
+                proveedor =
+                    "VASON";
+
+            }
+
+
+            if (
+                !PROVEEDORES.includes(
+                    proveedor
+                )
+            ) {
+
+                proveedor =
+                    "VIDEYNOL";
+
+            }
+
+
+            let clase =
+                p.clase ||
+                p.claseProducto ||
+                "otros";
+
+
+            if (
+                clase ===
+                "enzima"
+            ) {
+
+                clase =
+                    "encima";
+
+            }
+
+
+            if (
+                !CLASES.includes(
+                    clase
+                )
+            ) {
+
+                clase =
+                    "otros";
+
+            }
+
+
+            let unidad =
+                p.unidad ||
+                "Kg";
+
+
+            if (
+                !UNIDADES.includes(
+                    unidad
+                )
+            ) {
+
+                unidad =
+                    "Kg";
+
+            }
+
+
+            const nuevoProducto = {
+
+                id:
+                    p.id ||
+                    uid("p"),
+
+                nombre:
+                    String(
+                        p.nombre ||
+                        p.producto ||
+                        (
+                            "Producto " +
+                            (indice + 1)
+                        )
+                    ),
+
+                proveedor:
+                    proveedor,
+
+                clase:
+                    clase,
+
+                unidad:
+                    unidad,
+
+                dosis:
+                    p.dosis ||
+                    p.dosisRecomendada ||
+                    "",
+
+                bajoStock:
+                    numero(
+                        p.bajoStock
+                    ),
+
+                caracteristicas:
+                    p.caracteristicas ||
+                    p.descripcion ||
+                    "",
+
+                lotes: []
+
+            };
+
+
+            // ------------------------------------------------
+            // FORMATO NUEVO
+            // ------------------------------------------------
+
+            if (
+                Array.isArray(
+                    p.lotes
+                )
+            ) {
+
+                p.lotes.forEach(
+                    function (l) {
+
+                        if (
+                            !l ||
+                            typeof l !==
+                            "object"
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        nuevoProducto.lotes.push({
+
+                            id:
+                                l.id ||
+                                uid("l"),
+
+                            nombre:
+                                String(
+                                    l.nombre ??
+                                    l.lote ??
+                                    "Sin lote"
+                                ),
+
+                            cantidadInicial:
+                                numero(
+                                    l.cantidadInicial
+                                )
+
+                        });
+
+                    }
+                );
+
+            }
+
+
+            // ------------------------------------------------
+            // COMPATIBILIDAD CON JSON PLANO
+            // ------------------------------------------------
+
+            else if (
+                p.lote !== undefined ||
+                p.cantidadInicial !== undefined ||
+                p.cantidadEntrada !== undefined
+            ) {
+
+                let cantidad =
+                    p.cantidadInicial;
+
+
+                if (
+                    cantidad === undefined
+                ) {
+
+                    cantidad =
+                        p.cantidadEntrada;
+
+                }
+
+
+                nuevoProducto.lotes.push({
+
+                    id:
+                        uid("l"),
+
+                    nombre:
+                        String(
+                            p.lote ||
+                            "Sin lote"
+                        ),
+
+                    cantidadInicial:
+                        numero(
+                            cantidad
+                        )
+
+                });
+
+            }
+
+
+            salida.productos.push(
+                nuevoProducto
+            );
+
+        }
+    );
+
+
+    // ========================================================
+    // VALIDAR MOVIMIENTOS
+    // ========================================================
+
+    const productosValidos =
+        new Set(
+            salida.productos.map(
+                function (p) {
+
+                    return p.id;
+
+                }
+            )
+        );
+
+
+    const lotesValidos =
+        new Set(
+            salida.productos.flatMap(
+                function (p) {
+
+                    return p.lotes.map(
+                        function (l) {
+
+                            return l.id;
+
+                        }
+                    );
+
+                }
+            )
+        );
+
+
+    salida.movimientos =
+        salida.movimientos
+            .filter(
+                function (movimiento) {
+
+                    return (
+                        movimiento &&
+                        productosValidos.has(
+                            movimiento.productoId
+                        ) &&
+                        lotesValidos.has(
+                            movimiento.loteId
+                        )
+                    );
+
+                }
+            )
+            .map(
+                function (movimiento) {
+
+                    return {
+
+                        id:
+                            movimiento.id ||
+                            uid("m"),
+
+                        productoId:
+                            movimiento.productoId,
+
+                        loteId:
+                            movimiento.loteId,
+
+                        tipo:
+                            movimiento.tipo ===
+                            "entrada"
+                                ? "entrada"
+                                : "consumo",
+
+                        cantidad:
+                            numero(
+                                movimiento.cantidad
+                            ),
+
+                        fecha:
+                            movimiento.fecha ||
+                            hoy(),
+
+                        descripcion:
+                            movimiento.descripcion ||
+                            ""
+
+                    };
+
+                }
+            );
+
+
+    return salida;
+
+}
+
+
+// ============================================================
+// IMPORTAR JSON
+// ============================================================
+
+function importJSON(evento) {
+
+    const archivo =
+        evento.target.files[0];
+
+
+    if (!archivo) return;
 
 
     const lector =
@@ -5035,77 +4241,111 @@ function importarJSON(
 
             try {
 
-                const importado =
+                const contenido =
                     JSON.parse(
                         lector.result
                     );
 
 
-                if (
-                    !importado ||
-                    !Array.isArray(
-                        importado.productos
-                    ) ||
-                    !Array.isArray(
-                        importado.movimientos
-                    )
-                ) {
-
-                    throw new Error(
-                        "El archivo no tiene una estructura válida."
+                const importado =
+                    normalizarImportacion(
+                        contenido
                     );
-                }
 
 
-                const confirmar =
+                const confirmado =
                     confirm(
-                        "La importación sustituirá los datos actuales.\n\n" +
-                        "¿Quieres continuar?"
+                        `Se van a importar:\n\n` +
+
+                        `${importado.productos.length} productos\n` +
+
+                        `${importado.productos.reduce(
+                            function (total, p) {
+
+                                return (
+                                    total +
+                                    p.lotes.length
+                                );
+
+                            },
+                            0
+                        )} lotes\n` +
+
+                        `${importado.movimientos.length} movimientos\n\n` +
+
+                        `ATENCIÓN:\n` +
+
+                        `Esto sustituirá los datos actuales ` +
+                        `del programa.\n\n` +
+
+                        `¿Continuar?`
                     );
 
 
-                if (!confirmar) {
+                if (!confirmado) {
+
+                    evento.target.value =
+                        "";
 
                     return;
+
                 }
 
 
                 datos =
-                    normalizarDatos(
-                        importado
-                    );
+                    importado;
 
 
-                guardarDatos();
-
-                actualizarTodo();
+                guardar();
 
 
-                mostrarToast(
-                    "Datos importados correctamente.",
-                    "success"
+                toast(
+                    "JSON importado correctamente."
                 );
 
-            }
 
-            catch (error) {
+                setTimeout(
+                    function () {
+
+                        location.reload();
+
+                    },
+                    500
+                );
+
+
+            } catch (error) {
 
                 console.error(
+                    "Error importando JSON:",
                     error
                 );
 
 
                 alert(
-                    "No se pudo importar el archivo.\n\n" +
+                    "No se pudo importar el JSON.\n\n" +
                     error.message
                 );
+
             }
 
-            finally {
 
-                evento.target.value =
-                    "";
-            }
+            evento.target.value =
+                "";
+
+        };
+
+
+    lector.onerror =
+        function () {
+
+            alert(
+                "No se pudo leer el archivo JSON."
+            );
+
+
+            evento.target.value =
+                "";
 
         };
 
@@ -5114,185 +4354,496 @@ function importarJSON(
         archivo,
         "UTF-8"
     );
+
 }
 
 
-/* =========================================================
-   EXPORTAR PDF
-   ========================================================= */
+// ============================================================
+// EXPORTAR PDF
+// ============================================================
 
-function exportarPDF() {
-
-    mostrarPagina(
-        "productos"
-    );
-
-
-    setTimeout(
-        () => {
-
-            window.print();
-
-        },
-        300
-    );
-}
-
-
-/* =========================================================
-   DESHACER ELIMINACIÓN
-   ========================================================= */
-
-document.addEventListener(
-    "keydown",
-    evento => {
-
-        if (
-            evento.ctrlKey &&
-            evento.key.toLowerCase() ===
-            "z"
-        ) {
-
-            if (
-                ultimoMovimientoEliminado
-            ) {
-
-                deshacerEliminacion();
-
-            }
-        }
-
-    }
-);
-
-
-/* =========================================================
-   DESHACER
-   ========================================================= */
-
-function deshacerEliminacion() {
+function exportPDF() {
 
     if (
-        !ultimoMovimientoEliminado
+        !window.jspdf
     ) {
+
+        alert(
+            "No se ha podido cargar jsPDF.\n\n" +
+            "Comprueba que tienes conexión a Internet " +
+            "y vuelve a intentarlo."
+        );
 
         return;
+
     }
-
-
-    const eliminacion =
-        ultimoMovimientoEliminado;
 
 
     if (
-        eliminacion.tipo ===
-        "movimiento"
+        typeof window.jspdf.jsPDF !==
+        "function"
     ) {
 
-        datos.movimientos.splice(
-
-            eliminacion.indice,
-
-            0,
-
-            eliminacion.movimiento
-
+        alert(
+            "La librería jsPDF no está disponible."
         );
+
+        return;
+
     }
 
 
-    else if (
-        eliminacion.tipo ===
-        "producto"
-    ) {
-
-        datos.productos.splice(
-
-            eliminacion.indice,
-
-            0,
-
-            eliminacion.producto
-
-        );
+    const jsPDF =
+        window.jspdf.jsPDF;
 
 
-        datos.movimientos.push(
-            ...eliminacion.movimientos
-        );
-    }
+    const doc =
+        new jsPDF({
+            orientation: "landscape",
+            unit: "mm",
+            format: "a4"
+        });
 
 
-    else if (
-        eliminacion.tipo ===
-        "lote"
-    ) {
+    // --------------------------------------------------------
+    // PORTADA
+    // --------------------------------------------------------
 
-        const producto =
-            obtenerProducto(
-                eliminacion.productoId
-            );
+    doc.setFontSize(20);
 
-
-        if (
-            producto
-        ) {
-
-            producto.lotes.splice(
-
-                eliminacion.indice,
-
-                0,
-
-                eliminacion.lote
-
-            );
-
-
-            datos.movimientos.push(
-                ...eliminacion.movimientos
-            );
-        }
-    }
-
-
-    ultimoMovimientoEliminado =
-        null;
-
-
-    guardarDatos();
-
-    actualizarTodo();
-
-
-    mostrarToast(
-        "Eliminación deshecha correctamente.",
-        "success"
+    doc.text(
+        "Stock Enológico",
+        14,
+        16
     );
+
+
+    doc.setFontSize(10);
+
+    doc.text(
+        "Resumen de productos, lotes y stock actual",
+        14,
+        23
+    );
+
+
+    doc.text(
+        "Fecha: " + hoy(),
+        14,
+        29
+    );
+
+
+    let primeraPaginaClase =
+        true;
+
+
+    // --------------------------------------------------------
+    // UNA SECCIÓN POR CLASE
+    // --------------------------------------------------------
+
+    CLASES.forEach(
+        function (clase) {
+
+            const productos =
+                datos.productos.filter(
+                    function (p) {
+
+                        return (
+                            p.clase ===
+                            clase
+                        );
+
+                    }
+                );
+
+
+            if (!productos.length) {
+
+                return;
+
+            }
+
+
+            doc.addPage();
+
+
+            doc.setFontSize(15);
+
+
+            doc.text(
+                capitalizar(clase),
+                14,
+                16
+            );
+
+
+            // ------------------------------------------------
+            // TABLA
+            // ------------------------------------------------
+
+            const filas = [];
+
+
+            productos.forEach(
+                function (p) {
+
+                    p.lotes.forEach(
+                        function (l) {
+
+                            const inicial =
+                                numero(
+                                    l.cantidadInicial
+                                );
+
+
+                            const entradas =
+                                entradasLote(
+                                    p.id,
+                                    l.id
+                                );
+
+
+                            const consumo =
+                                consumoLote(
+                                    p.id,
+                                    l.id
+                                );
+
+
+                            const stock =
+                                stockLote(
+                                    p.id,
+                                    l.id
+                                );
+
+
+                            filas.push([
+
+                                p.nombre,
+
+                                p.proveedor,
+
+                                l.nombre,
+
+                                formatoNumero(
+                                    inicial
+                                ) +
+                                " " +
+                                p.unidad,
+
+                                formatoNumero(
+                                    entradas
+                                ) +
+                                " " +
+                                p.unidad,
+
+                                formatoNumero(
+                                    consumo
+                                ) +
+                                " " +
+                                p.unidad,
+
+                                formatoNumero(
+                                    stock
+                                ) +
+                                " " +
+                                p.unidad
+
+                            ]);
+
+                        }
+                    );
+
+                }
+            );
+
+
+            if (
+                typeof doc.autoTable ===
+                "function"
+            ) {
+
+                doc.autoTable({
+
+                    startY: 23,
+
+                    head: [[
+
+                        "Producto",
+
+                        "Proveedor",
+
+                        "Lote",
+
+                        "Inicial",
+
+                        "Entradas",
+
+                        "Consumo",
+
+                        "Stock"
+
+                    ]],
+
+                    body:
+                        filas,
+
+                    styles: {
+
+                        fontSize: 7,
+
+                        cellPadding: 2
+
+                    },
+
+                    headStyles: {
+
+                        fillColor: [
+                            123,
+                            36,
+                            84
+                        ],
+
+                        textColor: 255
+
+                    },
+
+                    margin: {
+
+                        left: 10,
+
+                        right: 10
+
+                    }
+
+                });
+
+
+            } else {
+
+                // ------------------------------------------------
+                // FALLBACK SI AUTOTABLE NO CARGÓ
+                // ------------------------------------------------
+
+                let y = 30;
+
+
+                doc.setFontSize(7);
+
+
+                filas.forEach(
+                    function (fila) {
+
+                        doc.text(
+                            fila.join(" | "),
+                            10,
+                            y
+                        );
+
+
+                        y += 4;
+
+
+                        if (
+                            y > 190
+                        ) {
+
+                            doc.addPage();
+
+                            y = 20;
+
+                        }
+
+                    }
+                );
+
+            }
+
+
+            // ------------------------------------------------
+            // RESUMEN DE LA CLASE
+            // ------------------------------------------------
+
+            let yResumen = 200;
+
+
+            if (
+                doc.lastAutoTable &&
+                doc.lastAutoTable.finalY
+            ) {
+
+                yResumen =
+                    doc.lastAutoTable.finalY +
+                    8;
+
+            }
+
+
+            const cantidadLotes =
+                productos.reduce(
+                    function (total, p) {
+
+                        return (
+                            total +
+                            p.lotes.length
+                        );
+
+                    },
+                    0
+                );
+
+
+            const stockTotal =
+                productos.reduce(
+                    function (total, p) {
+
+                        return (
+                            total +
+                            stockProducto(p)
+                        );
+
+                    },
+                    0
+                );
+
+
+            const consumoTotal =
+                productos.reduce(
+                    function (total, p) {
+
+                        return (
+                            total +
+                            consumoProducto(p)
+                        );
+
+                    },
+                    0
+                );
+
+
+            const entradasTotal =
+                productos.reduce(
+                    function (total, p) {
+
+                        return (
+                            total +
+                            entradasProducto(p)
+                        );
+
+                    },
+                    0
+                );
+
+
+            doc.setFontSize(9);
+
+
+            doc.text(
+                "Productos: " +
+                productos.length +
+
+                "   Lotes: " +
+                cantidadLotes +
+
+                "   Entradas: " +
+                formatoNumero(
+                    entradasTotal
+                ) +
+
+                "   Consumo: " +
+                formatoNumero(
+                    consumoTotal
+                ) +
+
+                "   Stock actual: " +
+                formatoNumero(
+                    stockTotal
+                ),
+                14,
+                yResumen
+            );
+
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // GUARDAR PDF
+    // --------------------------------------------------------
+
+    doc.save(
+        "stock-enologico.pdf"
+    );
+
+
+    toast(
+        "PDF generado correctamente."
+    );
+
 }
 
 
-/* =========================================================
-   ATAJO CTRL + Z
-   ========================================================= */
+// ============================================================
+// HACER FUNCIONES DISPONIBLES PARA HTML
+// ============================================================
 
-window.addEventListener(
-    "keydown",
-    evento => {
+window.abrirProducto =
+    abrirProducto;
 
-        if (
-            evento.ctrlKey &&
-            evento.key === "z"
-        ) {
+window.abrirLote =
+    abrirLote;
 
-            /*
-               El evento principal ya se encarga
-               de realizar el deshacer.
-            */
+window.mostrarClase =
+    mostrarClase;
 
-            evento.preventDefault();
+window.mostrarHistorial =
+    mostrarHistorial;
 
-        }
+window.mostrarProducto =
+    mostrarProducto;
 
-    }
-);
+window.eliminarProducto =
+    eliminarProducto;
+
+window.eliminarLote =
+    eliminarLote;
+
+window.abrirMovimiento =
+    abrirMovimiento;
+
+window.eliminarMovimiento =
+    eliminarMovimiento;
+
+window.exportJSON =
+    exportJSON;
+
+window.importJSON =
+    importJSON;
+
+window.exportPDF =
+    exportPDF;
+
+window.limpiarHistorial =
+    limpiarHistorial;
+
+
+// ============================================================
+// INICIO
+// ============================================================
+
+if (
+    document.readyState ===
+    "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        init
+    );
+
+} else {
+
+    init();
+
+}
