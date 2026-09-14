@@ -35,6 +35,7 @@ const CLASES = [
 ];
 
 const UNIDADES = [
+    "Ud.",
     "mg",
     "g",
     "Kg",
@@ -1255,15 +1256,25 @@ function cardProducto(p) {
 
                 <div>
 
-                    <h3 class="product-name">
-                        ${escapar(p.nombre)}
-                    </h3>
+                    <h3 class="product-name"> 
+    ${escapar(p.nombre)} 
+</h3>
 
-                    <div class="meta">
-                        ${escapar(p.proveedor)}
-                        ·
-                        ${escapar(p.unidad)}
-                    </div>
+${ 
+    p.caracteristicas
+        ? `
+            <div class="product-characteristics">
+                ${escapar(p.caracteristicas)}
+            </div>
+          `
+        : ""
+}
+
+<div class="meta"> 
+    ${escapar(p.proveedor)} 
+    · 
+    ${escapar(p.unidad)} 
+</div>
 
                 </div>
 
@@ -2123,7 +2134,6 @@ function tablaMovimientos(
 // ============================================================
 // MOSTRAR HISTORIAL
 // ============================================================
-
 function mostrarHistorial() {
 
     if ($("viewClasses")) {
@@ -2156,21 +2166,6 @@ function mostrarHistorial() {
     renderNav();
 
 
-    const movimientos =
-        datos.movimientos
-            .slice()
-            .sort(
-                function (a, b) {
-
-                    return String(b.fecha)
-                        .localeCompare(
-                            String(a.fecha)
-                        );
-
-                }
-            );
-
-
     const tabla =
         $("historyTable");
 
@@ -2178,18 +2173,198 @@ function mostrarHistorial() {
     if (!tabla) return;
 
 
+    /* =====================================================
+       FILTROS
+    ====================================================== */
+
+    const buscador =
+        $("historySearch");
+
+    const filtroTipo =
+        $("historyTypeFilter");
+
+    const filtroClase =
+        $("historyClassFilter");
+
+
+    const textoBusqueda =
+        buscador
+            ? buscador.value
+                .trim()
+                .toLowerCase()
+            : "";
+
+
+    const tipoSeleccionado =
+        filtroTipo
+            ? filtroTipo.value
+            : "todos";
+
+
+    const claseSeleccionada =
+        filtroClase
+            ? filtroClase.value
+            : "todas";
+
+
+    /* =====================================================
+       MOVIMIENTOS
+    ====================================================== */
+
+    let movimientos =
+        datos.movimientos
+            .slice();
+
+
+    /* =====================================================
+       FILTRAR
+    ====================================================== */
+
+    movimientos =
+        movimientos.filter(
+            function (movimiento) {
+
+                const p =
+                    producto(
+                        movimiento.productoId
+                    );
+
+
+                /* -----------------------------------------
+                   FILTRO TIPO
+                ----------------------------------------- */
+
+                if (
+                    tipoSeleccionado !== "todos" &&
+                    movimiento.tipo !== tipoSeleccionado
+                ) {
+
+                    return false;
+
+                }
+
+
+                /* -----------------------------------------
+                   FILTRO CLASE
+                ----------------------------------------- */
+
+                if (
+                    claseSeleccionada !== "todas"
+                ) {
+
+                    if (
+                        !p ||
+                        p.clase !== claseSeleccionada
+                    ) {
+
+                        return false;
+
+                    }
+
+                }
+
+
+                /* -----------------------------------------
+                   BUSCADOR
+                ----------------------------------------- */
+
+                if (textoBusqueda) {
+
+                    const l =
+                        p
+                            ? lote(
+                                p.id,
+                                movimiento.loteId
+                            )
+                            : null;
+
+
+                    const texto =
+                        [
+
+                            p?.nombre || "",
+
+                            p?.proveedor || "",
+
+                            p?.clase || "",
+
+                            p?.unidad || "",
+
+                            l?.nombre || "",
+
+                            movimiento.fecha || "",
+
+                            movimiento.tipo || "",
+
+                            movimiento.descripcion || "",
+
+                            movimiento.cantidad ?? ""
+
+                        ]
+                            .join(" ")
+                            .toLowerCase();
+
+
+                    if (
+                        !texto.includes(
+                            textoBusqueda
+                        )
+                    ) {
+
+                        return false;
+
+                    }
+
+                }
+
+
+                return true;
+
+            }
+        );
+
+
+    /* =====================================================
+       ORDENAR POR FECHA
+    ====================================================== */
+
+    movimientos.sort(
+        function (a, b) {
+
+            return String(b.fecha)
+                .localeCompare(
+                    String(a.fecha)
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       SIN RESULTADOS
+    ====================================================== */
+
     if (!movimientos.length) {
 
         tabla.innerHTML = `
+
             <div class="empty">
-                No hay movimientos registrados.
+
+                No hay movimientos que coincidan
+                con los filtros.
+
             </div>
+
         `;
 
         return;
 
     }
 
+
+    /* =====================================================
+       TABLA
+    ====================================================== */
 
     tabla.innerHTML = `
 
@@ -2235,7 +2410,9 @@ function mostrarHistorial() {
             <tbody>
 
                 ${
+
                     movimientos.map(
+
                         function (movimiento) {
 
                             const p =
@@ -2258,9 +2435,11 @@ function mostrarHistorial() {
                                 <tr>
 
                                     <td>
+
                                         ${escapar(
                                             movimiento.fecha
                                         )}
+
                                     </td>
 
 
@@ -2293,7 +2472,9 @@ function mostrarHistorial() {
                                         ${
                                             movimiento.tipo ===
                                             "entrada"
+
                                                 ? "ENTRADA"
+
                                                 : "CONSUMO"
                                         }
 
@@ -2336,6 +2517,7 @@ function mostrarHistorial() {
                                         ${
                                             p && l
                                                 ? `
+
                                                     <button
                                                         class="btn"
                                                         data-action="edit-movement"
@@ -2343,8 +2525,11 @@ function mostrarHistorial() {
                                                         data-lid="${l.id}"
                                                         data-mid="${movimiento.id}"
                                                     >
+
                                                         ✏
+
                                                     </button>
+
                                                 `
                                                 : ""
                                         }
@@ -2355,7 +2540,9 @@ function mostrarHistorial() {
                                             data-action="delete-movement"
                                             data-mid="${movimiento.id}"
                                         >
+
                                             🗑
+
                                         </button>
 
                                     </td>
@@ -2365,7 +2552,9 @@ function mostrarHistorial() {
                             `;
 
                         }
+
                     ).join("")
+
                 }
 
             </tbody>
@@ -4845,5 +5034,55 @@ if (
 } else {
 
     init();
+
+}
+
+const historySearch =
+    $("historySearch");
+
+if (historySearch) {
+
+    historySearch.addEventListener(
+        "input",
+        function () {
+
+            mostrarHistorial();
+
+        }
+    );
+
+}
+
+
+const historyTypeFilter =
+    $("historyTypeFilter");
+
+if (historyTypeFilter) {
+
+    historyTypeFilter.addEventListener(
+        "change",
+        function () {
+
+            mostrarHistorial();
+
+        }
+    );
+
+}
+
+
+const historyClassFilter =
+    $("historyClassFilter");
+
+if (historyClassFilter) {
+
+    historyClassFilter.addEventListener(
+        "change",
+        function () {
+
+            mostrarHistorial();
+
+        }
+    );
 
 }

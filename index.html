@@ -158,54 +158,154 @@
 
 
 
-    <!-- =====================================================
-         HISTORIAL GENERAL
-    ====================================================== -->
+   <!-- =====================================================
+     HISTORIAL GENERAL
+====================================================== -->
 
-    <section
-      id="viewHistory"
-      class="view hidden">
+<section 
+  id="viewHistory" 
+  class="view hidden">
 
+  <div class="page-head">
 
-      <div class="page-head">
+    <div>
 
-        <div>
+      <h2>📋 Historial</h2>
 
-          <h2>📋 Historial</h2>
+      <p>
+        Entradas y consumos de todos los productos y lotes.
+      </p>
 
-          <p>
-            Entradas y consumos de todos los productos y lotes.
-          </p>
+    </div>
 
-        </div>
+    <div class="history-actions">
 
+      <button 
+        id="btnClearHistory" 
+        class="btn danger">
 
-        <div class="history-actions">
+        🧹 Limpiar movimientos e historial
 
-          <button
-            id="btnClearHistory"
-            class="btn danger">
+      </button>
 
-            🧹 Limpiar movimientos e historial
+    </div>
 
-          </button>
-
-        </div>
-
-      </div>
+  </div>
 
 
+  <!-- =====================================================
+       FILTROS DEL HISTORIAL
+  ====================================================== -->
 
-      <!-- TABLA HISTORIAL -->
+  <div class="history-filters">
 
-      <div
-        id="historyTable"
-        class="table-card">
-      </div>
+    <div class="history-search">
 
-    </section>
+      <label for="historySearch">
+        🔎 Buscar
+      </label>
 
-  </main>
+      <input
+        type="search"
+        id="historySearch"
+        placeholder="Producto, lote, descripción..."
+      >
+
+    </div>
+
+
+    <div class="history-filter">
+
+      <label for="historyTypeFilter">
+        Tipo de movimiento
+      </label>
+
+      <select id="historyTypeFilter">
+
+        <option value="todos">
+          Todos
+        </option>
+
+        <option value="entrada">
+          Entradas
+        </option>
+
+        <option value="consumo">
+          Consumos
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="history-filter">
+
+      <label for="historyClassFilter">
+        Clase
+      </label>
+
+      <select id="historyClassFilter">
+
+        <option value="todas">
+          Todas las clases
+        </option>
+
+        <option value="levadura">
+          Levadura
+        </option>
+
+        <option value="nutrición">
+          Nutrición
+        </option>
+
+        <option value="encima">
+          Encima
+        </option>
+
+        <option value="chips fermentación">
+          Chips fermentación
+        </option>
+
+        <option value="duelas">
+          Duelas
+        </option>
+
+        <option value="tanino">
+          Tanino
+        </option>
+
+        <option value="clarificante">
+          Clarificante
+        </option>
+
+        <option value="conservante">
+          Conservante
+        </option>
+
+        <option value="regulador">
+          Regulador
+        </option>
+
+        <option value="otros">
+          Otros
+        </option>
+
+      </select>
+
+    </div>
+
+  </div>
+
+
+  <!-- TABLA HISTORIAL -->
+
+  <div 
+    id="historyTable" 
+    class="table-card">
+  </div>
+
+</section>
 
 
 
