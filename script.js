@@ -153,6 +153,18 @@ function toast(mensaje) {
     }, 2300);
 }
 
+function formatearFecha(fecha) {
+    if (!fecha) return "";
+
+    const partes = String(fecha).split("T")[0].split("-");
+
+    if (partes.length === 3) {
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    return fecha;
+}
+
 
 // ============================================================
 // ESTRUCTURA INICIAL
@@ -777,21 +789,28 @@ function renderNav() {
                 class="${clase === claseActual ? "active" : ""}"
                 data-class="${escapar(clase)}"
             >
-                ${escapar(capitalizar(clase))}
+                ${escapar(capitalizar(clase).toUpperCase())}
             </button>
         `;
 
     });
 
 
-    html += `
-        <button
-            class="${claseActual === "__historial" ? "active" : ""}"
-            data-history
-        >
-            📋 Historial
-        </button>
-    `;
+  html += ` 
+    <button 
+        class="${claseActual === "__historial" ? "active" : ""}" 
+        data-history 
+    > 
+        📋 HISTORIAL
+    </button>
+
+    <button 
+        class="${claseActual === "__informe" ? "active" : ""}" 
+        data-report 
+    > 
+        📊 INFORME 
+    </button>
+`;
 
 
     nav.innerHTML = html;
@@ -848,6 +867,24 @@ function manejarClick(evento) {
         claseActual = "__historial";
 
         mostrarHistorial();
+
+        return;
+
+    }
+
+        // --------------------------------------------------------
+    // INFORME
+    // --------------------------------------------------------
+
+    const botonInforme =
+        evento.target.closest("[data-report]");
+
+
+    if (botonInforme) {
+
+        claseActual = "__informe";
+
+        mostrarInforme();
 
         return;
 
@@ -1009,6 +1046,15 @@ function mostrarClase() {
     if ($("viewHistory")) {
 
         $("viewHistory")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("viewReport")) {
+
+        $("viewReport")
             .classList
             .add("hidden");
 
@@ -2038,11 +2084,11 @@ function tablaMovimientos(
 
                                 <tr>
 
-                                    <td>
-                                        ${escapar(
-                                            movimiento.fecha
-                                        )}
-                                    </td>
+                                 <td> 
+    ${escapar( 
+        formatearFecha(movimiento.fecha) 
+    )} 
+</td>
 
 
                                     <td
@@ -2134,6 +2180,7 @@ function tablaMovimientos(
 // ============================================================
 // MOSTRAR HISTORIAL
 // ============================================================
+
 function mostrarHistorial() {
 
     if ($("viewClasses")) {
@@ -2159,6 +2206,15 @@ function mostrarHistorial() {
         $("viewHistory")
             .classList
             .remove("hidden");
+
+    }
+
+
+    if ($("viewReport")) {
+
+        $("viewReport")
+            .classList
+            .add("hidden");
 
     }
 
@@ -2436,11 +2492,11 @@ function mostrarHistorial() {
 
                                     <td>
 
-                                        ${escapar(
-                                            movimiento.fecha
-                                        )}
+    ${escapar(
+        formatearFecha(movimiento.fecha)
+    )}
 
-                                    </td>
+</td>
 
 
                                     <td>
@@ -2562,6 +2618,562 @@ function mostrarHistorial() {
         </table>
 
     `;
+
+}
+
+// ============================================================
+// MOSTRAR INFORME
+// ============================================================
+
+function mostrarInforme() {
+
+    if ($("viewClasses")) {
+
+        $("viewClasses")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("viewProduct")) {
+
+        $("viewProduct")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("viewHistory")) {
+
+        $("viewHistory")
+            .classList
+            .add("hidden");
+
+    }
+
+
+    if ($("viewReport")) {
+
+        $("viewReport")
+            .classList
+            .remove("hidden");
+
+    }
+
+
+    renderNav();
+
+    // RESTO DE LA FUNCIÓN DEL INFORME...
+
+    const viewClasses =
+        $("viewClasses");
+
+    const viewProduct =
+        $("viewProduct");
+
+    const viewHistory =
+        $("viewHistory");
+
+    const viewReport =
+        $("viewReport");
+
+
+    if (viewClasses) {
+
+        viewClasses.classList.add("hidden");
+
+    }
+
+
+    if (viewProduct) {
+
+        viewProduct.classList.add("hidden");
+
+    }
+
+
+    if (viewHistory) {
+
+        viewHistory.classList.add("hidden");
+
+    }
+
+
+    if (viewReport) {
+
+        viewReport.classList.remove("hidden");
+
+    }
+
+
+    renderNav();
+
+
+    // ========================================================
+    // DATOS GENERALES
+    // ========================================================
+
+    const productos =
+        Array.isArray(datos.productos)
+            ? datos.productos
+            : [];
+
+
+    let totalProductos =
+        productos.length;
+
+
+    let totalLotes = 0;
+
+
+    let stockTotalKg = 0;
+
+
+    // ========================================================
+    // AGRUPACIÓN POR CLASE
+    // ========================================================
+
+    const resumenClases = {};
+
+
+    productos.forEach(function (p) {
+
+        const clase =
+            p.clase || "otros";
+
+
+        if (!resumenClases[clase]) {
+
+            resumenClases[clase] = {
+
+                productos: 0,
+
+                lotes: 0,
+
+                stockKg: 0
+
+            };
+
+        }
+
+
+        resumenClases[clase].productos++;
+
+
+        const lotes =
+            Array.isArray(p.lotes)
+                ? p.lotes
+                : [];
+
+
+        resumenClases[clase].lotes +=
+            lotes.length;
+
+
+        totalLotes +=
+            lotes.length;
+
+
+        // ====================================================
+        // STOCK DE CADA LOTE
+        // ====================================================
+
+        lotes.forEach(function (l) {
+
+            const stock =
+                Number(
+                    stockLote(
+                        p.id,
+                        l.id
+                    )
+                ) || 0;
+
+
+            // Todo el stock enológico se considera Kg
+            resumenClases[clase].stockKg +=
+                stock;
+
+
+            stockTotalKg +=
+                stock;
+
+        });
+
+    });
+
+
+    // ========================================================
+    // RESUMEN SUPERIOR
+    // ========================================================
+
+    const summary =
+        $("reportSummary");
+
+
+    if (summary) {
+
+        summary.innerHTML = `
+
+            <div class="report-card">
+
+                <div class="report-card-icon">
+                    🍷
+                </div>
+
+                <div>
+
+                    <div class="report-card-label">
+                        Productos
+                    </div>
+
+                    <div class="report-card-value">
+                        ${formatoNumero(totalProductos)}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="report-card">
+
+                <div class="report-card-icon">
+                    📦
+                </div>
+
+                <div>
+
+                    <div class="report-card-label">
+                        Lotes
+                    </div>
+
+                    <div class="report-card-value">
+                        ${formatoNumero(totalLotes)}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="report-card">
+
+                <div class="report-card-icon">
+                    ⚖️
+                </div>
+
+                <div>
+
+                    <div class="report-card-label">
+                        Stock Total
+                    </div>
+
+                    <div class="report-card-value">
+                        ${formatoNumero(stockTotalKg)}
+                        <span>kg</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    // ========================================================
+    // ORDEN DE LAS CLASES
+    // ========================================================
+
+    const clasesOrdenadas =
+        CLASES.slice();
+
+
+    // Por si existe alguna clase en los datos
+    // que no esté actualmente en CLASES.
+
+    Object.keys(resumenClases).forEach(
+        function (clase) {
+
+            if (
+                !clasesOrdenadas.includes(clase)
+            ) {
+
+                clasesOrdenadas.push(clase);
+
+            }
+
+        }
+    );
+
+
+    // ========================================================
+    // TABLA
+    // ========================================================
+
+    const table =
+        $("reportTable");
+
+
+    if (!table) return;
+
+
+    let html = `
+
+        <table class="data-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Clase</th>
+
+                    <th>Productos</th>
+
+                    <th>Lotes</th>
+
+                    <th>Stock</th>
+
+                    <th>Rendimiento de Uva</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+    `;
+
+
+    clasesOrdenadas.forEach(
+        function (clase) {
+
+            const datosClase =
+                resumenClases[clase] || {
+
+                    productos: 0,
+
+                    lotes: 0,
+
+                    stockKg: 0
+
+                };
+
+
+            const stock =
+                datosClase.stockKg;
+
+
+            // =================================================
+            // CÁLCULO DEL RENDIMIENTO
+            // =================================================
+
+            let rendimiento =
+                null;
+
+
+            const claseNormalizada =
+                clase
+                    .toLowerCase()
+                    .trim();
+
+
+            // -----------------------------------------------
+            // LEVADURA
+            // 20 g/hL
+            // -----------------------------------------------
+
+            if (
+                claseNormalizada ===
+                "levadura"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                const hectolitros =
+                    gramos / 20;
+
+
+                rendimiento =
+                    hectolitros * 100 / 0.75;
+
+            }
+
+
+            // -----------------------------------------------
+            // NUTRICIÓN
+            // 30 g/hL
+            // -----------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "nutrición"
+                ||
+                claseNormalizada ===
+                "nutricion"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                const hectolitros =
+                    gramos / 30;
+
+
+                rendimiento =
+                    hectolitros * 100 / 0.75;
+
+            }
+
+
+            // -----------------------------------------------
+            // TANINO
+            // 30 g/hL
+            // -----------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "tanino"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                const hectolitros =
+                    gramos / 30;
+
+
+                rendimiento =
+                    hectolitros * 100 / 0.75;
+
+            }
+
+
+            // -----------------------------------------------
+            // ENCIMA
+            // 2 g / 100 kg de uva
+            // -----------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "encima"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                rendimiento =
+                    gramos * 100 / 2;
+
+            }
+
+
+            // -----------------------------------------------
+            // CHIPS FERMENTACIÓN
+            // 2 g / 100 kg de uva
+            // -----------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "chips fermentación"
+                ||
+                claseNormalizada ===
+                "chips fermentacion"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                rendimiento =
+                    gramos * 100 / 2;
+
+            }
+
+
+            // =================================================
+            // MOSTRAR FILA
+            // =================================================
+
+            html += `
+
+                <tr>
+
+                    <td>
+                        <strong>
+                            ${escapar(
+                                capitalizar(clase)
+                            )}
+                        </strong>
+                    </td>
+
+                    <td>
+                        ${formatoNumero(
+                            datosClase.productos
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatoNumero(
+                            datosClase.lotes
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatoNumero(stock)}
+                        Kg
+                    </td>
+
+                    <td>
+
+                        ${
+                            rendimiento !== null
+
+                            ?
+
+                            `
+                            <strong>
+                               ${formatoNumero(
+    Math.round(rendimiento)
+)}
+                            </strong>
+                            kg Uva
+                            `
+
+                            :
+
+                            `<span class="report-no-value">—</span>`
+                        }
+
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+    );
+
+
+    html += `
+
+            </tbody>
+
+        </table>
+
+    `;
+
+
+    table.innerHTML =
+        html;
 
 }
 
@@ -4553,9 +5165,7 @@ function importJSON(evento) {
 
 function exportPDF() {
 
-    if (
-        !window.jspdf
-    ) {
+    if (!window.jspdf) {
 
         alert(
             "No se ha podido cargar jsPDF.\n\n" +
@@ -4588,48 +5198,447 @@ function exportPDF() {
 
     const doc =
         new jsPDF({
+
             orientation: "landscape",
+
             unit: "mm",
+
             format: "a4"
+
         });
 
 
-    // --------------------------------------------------------
-    // PORTADA
-    // --------------------------------------------------------
+    // ========================================================
+    // INFORME GENERAL
+    // ========================================================
 
-    doc.setFontSize(20);
+    
+doc.setFontSize(10);
+
+doc.setTextColor(100, 100, 100);
+
+doc.text(
+    "Fecha: " + formatearFecha(hoy()),
+    283,
+    12,
+    { align: "right" }
+);
+    doc.setFontSize(17);
 
     doc.text(
-        "Stock Enológico",
+        "Informe general",
         14,
         16
     );
 
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
 
     doc.text(
-        "Resumen de productos, lotes y stock actual",
+        "Resumen general del stock enológico y rendimiento de uva",
         14,
-        23
+        22
+    );
+
+
+    // --------------------------------------------------------
+    // DATOS GENERALES
+    // --------------------------------------------------------
+
+    const productos =
+        Array.isArray(datos.productos)
+            ? datos.productos
+            : [];
+
+
+    const totalProductos =
+        productos.length;
+
+
+    let totalLotes = 0;
+
+    let stockTotalKg = 0;
+
+
+    const resumenClases = {};
+
+
+    productos.forEach(
+        function (p) {
+
+            const clase =
+                p.clase || "otros";
+
+
+            if (!resumenClases[clase]) {
+
+                resumenClases[clase] = {
+
+                    productos: 0,
+
+                    lotes: 0,
+
+                    stockKg: 0
+
+                };
+
+            }
+
+
+            resumenClases[clase].productos++;
+
+
+            const lotes =
+                Array.isArray(p.lotes)
+                    ? p.lotes
+                    : [];
+
+
+            resumenClases[clase].lotes +=
+                lotes.length;
+
+
+            totalLotes +=
+                lotes.length;
+
+
+            lotes.forEach(
+                function (l) {
+
+                    const stock =
+                        Number(
+                            stockLote(
+                                p.id,
+                                l.id
+                            )
+                        ) || 0;
+
+
+                    resumenClases[clase].stockKg +=
+                        stock;
+
+
+                    stockTotalKg +=
+                        stock;
+
+                }
+            );
+
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // RESUMEN SUPERIOR
+    // --------------------------------------------------------
+
+    doc.setFontSize(11);
+
+    doc.text(
+        "Productos: " +
+        totalProductos,
+
+        14,
+        31
     );
 
 
     doc.text(
-        "Fecha: " + hoy(),
-        14,
-        29
+        "Lotes: " +
+        totalLotes,
+
+        75,
+        31
     );
 
 
-    let primeraPaginaClase =
-        true;
+    doc.text(
+        "Stock total: " +
+        formatoNumero(stockTotalKg) +
+        " kg",
+
+        125,
+        31
+    );
 
 
     // --------------------------------------------------------
-    // UNA SECCIÓN POR CLASE
+    // TABLA INFORME
     // --------------------------------------------------------
+
+    const filasInforme = [];
+
+
+    const clasesInforme =
+        CLASES.slice();
+
+
+    Object.keys(
+        resumenClases
+    ).forEach(
+        function (clase) {
+
+            if (
+                !clasesInforme.includes(clase)
+            ) {
+
+                clasesInforme.push(clase);
+
+            }
+
+        }
+    );
+
+
+    clasesInforme.forEach(
+        function (clase) {
+
+            const datosClase =
+                resumenClases[clase] || {
+
+                    productos: 0,
+
+                    lotes: 0,
+
+                    stockKg: 0
+
+                };
+
+
+            const stock =
+                datosClase.stockKg;
+
+
+            let rendimiento =
+                null;
+
+
+            const claseNormalizada =
+                clase
+                    .toLowerCase()
+                    .trim();
+
+
+            // ------------------------------------------------
+            // LEVADURA
+            // 20 g/hL
+            // ------------------------------------------------
+
+            if (
+                claseNormalizada ===
+                "levadura"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                const hectolitros =
+                    gramos / 20;
+
+
+                rendimiento =
+                    hectolitros *
+                    100 /
+                    0.75;
+
+            }
+
+
+            // ------------------------------------------------
+            // NUTRICIÓN
+            // 30 g/hL
+            // ------------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "nutrición" ||
+                claseNormalizada ===
+                "nutricion"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                const hectolitros =
+                    gramos / 30;
+
+
+                rendimiento =
+                    hectolitros *
+                    100 /
+                    0.75;
+
+            }
+
+
+            // ------------------------------------------------
+            // TANINO
+            // 30 g/hL
+            // ------------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "tanino"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                const hectolitros =
+                    gramos / 30;
+
+
+                rendimiento =
+                    hectolitros *
+                    100 /
+                    0.75;
+
+            }
+
+
+            // ------------------------------------------------
+            // ENCIMA
+            // 2 g / 100 kg UVA
+            // ------------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "encima"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                rendimiento =
+                    gramos *
+                    100 /
+                    2;
+
+            }
+
+
+            // ------------------------------------------------
+            // CHIPS FERMENTACIÓN
+            // 2 g / 100 kg UVA
+            // ------------------------------------------------
+
+            else if (
+                claseNormalizada ===
+                "chips fermentación" ||
+                claseNormalizada ===
+                "chips fermentacion"
+            ) {
+
+                const gramos =
+                    stock * 1000;
+
+
+                rendimiento =
+                    gramos *
+                    100 /
+                    2;
+
+            }
+
+
+            filasInforme.push([
+
+                capitalizar(clase),
+
+                formatoNumero(
+                    datosClase.productos
+                ),
+
+                formatoNumero(
+                    datosClase.lotes
+                ),
+
+                formatoNumero(
+                    stock
+                ) + " kg",
+
+                rendimiento !== null
+
+                    ? formatoNumero(
+                        Math.round(
+                            rendimiento
+                        )
+                    ) + " kg uva"
+
+                    : "—"
+
+            ]);
+
+        }
+    );
+
+
+    if (
+        typeof doc.autoTable ===
+        "function"
+    ) {
+
+        doc.autoTable({
+
+            startY: 38,
+
+            head: [[
+
+                "Clase",
+
+                "Productos",
+
+                "Lotes",
+
+                "Stock",
+
+                "Rendimiento de uva"
+
+            ]],
+
+            body:
+                filasInforme,
+
+            styles: {
+
+                fontSize: 8,
+
+                cellPadding: 2
+
+            },
+
+            headStyles: {
+
+                fillColor: [
+                    123,
+                    36,
+                    84
+                ],
+
+                textColor: 255
+
+            },
+
+            margin: {
+
+                left: 10,
+
+                right: 10
+
+            }
+
+        });
+
+    }
+
+
+    // ========================================================
+    // PÁGINAS POR CLASE
+    // ========================================================
 
     CLASES.forEach(
         function (clase) {
@@ -4812,7 +5821,7 @@ function exportPDF() {
             } else {
 
                 // ------------------------------------------------
-                // FALLBACK SI AUTOTABLE NO CARGÓ
+                // FALLBACK
                 // ------------------------------------------------
 
                 let y = 30;
@@ -4929,6 +5938,7 @@ function exportPDF() {
 
 
             doc.text(
+
                 "Productos: " +
                 productos.length +
 
@@ -4949,17 +5959,20 @@ function exportPDF() {
                 formatoNumero(
                     stockTotal
                 ),
+
                 14,
+
                 yResumen
+
             );
 
         }
     );
 
 
-    // --------------------------------------------------------
+    // ========================================================
     // GUARDAR PDF
-    // --------------------------------------------------------
+    // ========================================================
 
     doc.save(
         "stock-enologico.pdf"
@@ -4971,7 +5984,6 @@ function exportPDF() {
     );
 
 }
-
 
 // ============================================================
 // HACER FUNCIONES DISPONIBLES PARA HTML
@@ -5086,3 +6098,4 @@ if (historyClassFilter) {
     );
 
 }
+
