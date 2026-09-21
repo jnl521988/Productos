@@ -3076,27 +3076,35 @@ function mostrarInforme() {
             }
 
 
-            // -----------------------------------------------
-            // CHIPS FERMENTACIÓN
-            // 2 g / 100 kg de uva
-            // -----------------------------------------------
+           // ------------------------------------------------
+// CHIPS FERMENTACIÓN
+// 2 g / LITRO DE VINO
+// Rendimiento: 0,75 L vino / kg uva
+// ------------------------------------------------
 
-            else if (
-                claseNormalizada ===
-                "chips fermentación"
-                ||
-                claseNormalizada ===
-                "chips fermentacion"
-            ) {
+else if (
+    claseNormalizada ===
+    "chips fermentación" ||
+    claseNormalizada ===
+    "chips fermentacion"
+) {
 
-                const gramos =
-                    stock * 1000;
+    const gramos =
+        stock * 1000;
 
 
-                rendimiento =
-                    gramos * 100 / 2;
+    // Litros de vino que se pueden tratar
+    const litros =
+        gramos / 2;
 
-            }
+
+    // Conversión de litros de vino
+    // a kg de uva
+    rendimiento =
+        litros /
+        0.75;
+
+}
 
 
             // =================================================
@@ -5521,28 +5529,35 @@ doc.text(
             }
 
 
-            // ------------------------------------------------
-            // CHIPS FERMENTACIÓN
-            // 2 g / 100 kg UVA
-            // ------------------------------------------------
+          // ------------------------------------------------
+// CHIPS FERMENTACIÓN
+// 2 g / LITRO DE VINO
+// Rendimiento: 0,75 L vino / kg uva
+// ------------------------------------------------
 
-            else if (
-                claseNormalizada ===
-                "chips fermentación" ||
-                claseNormalizada ===
-                "chips fermentacion"
-            ) {
+else if (
+    claseNormalizada ===
+    "chips fermentación" ||
+    claseNormalizada ===
+    "chips fermentacion"
+) {
 
-                const gramos =
-                    stock * 1000;
+    const gramos =
+        stock * 1000;
 
 
-                rendimiento =
-                    gramos *
-                    100 /
-                    2;
+    // Litros de vino que se pueden tratar
+    const litros =
+        gramos / 2;
 
-            }
+
+    // Conversión de litros de vino
+    // a kg de uva
+    rendimiento =
+        litros /
+        0.75;
+
+}
 
 
             filasInforme.push([
