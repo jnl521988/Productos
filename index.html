@@ -812,59 +812,11 @@
 </script>
 
 
-<!-- =====================================================
-     FIREBASE
-====================================================== -->
+  <!-- =====================================================
+       JAVASCRIPT DEL PROGRAMA
+  ====================================================== -->
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-    import {
-        getDatabase,
-        ref,
-        set,
-        onValue
-    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyDxEFNqdHu15qsu31K2d6kNwr5e_69aq7U",
-        authDomain: "stock-enologico.firebaseapp.com",
-        projectId: "stock-enologico",
-        storageBucket: "stock-enologico.firebasestorage.app",
-        messagingSenderId: "661204852361",
-        appId: "1:661204852361:web:9a93dae34fb52bb0cfb058"
-    };
-
-   const app = initializeApp(firebaseConfig);
-
-const db = getDatabase(
-    app,
-    "https://stock-enologico-default-rtdb.europe-west1.firebasedatabase.app"
-);
-
-    // Ruta donde guardaremos TODO el stock
-    const stockRef = ref(db, "stockEnologico");
-
-    // Dejamos las funciones disponibles para script.js
-    window.firebaseStock = {
-        db: db,
-        ref: stockRef,
-        set: set,
-        onValue: onValue
-    };
-
-    console.log("Firebase conectado correctamente.");
-
-    window.dispatchEvent(
-    new Event("firebase-ready")
-);
-</script>
-
-
-<!-- =====================================================
-     JAVASCRIPT DEL PROGRAMA
-====================================================== -->
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 
 </body>
 </html>
