@@ -834,11 +834,12 @@
         appId: "1:661204852361:web:9a93dae34fb52bb0cfb058"
     };
 
-    // Inicializar Firebase
-    const app = initializeApp(firebaseConfig);
+   const app = initializeApp(firebaseConfig);
 
-    // Inicializar Realtime Database
-    const db = getDatabase(app);
+const db = getDatabase(
+    app,
+    "https://stock-enologico-default-rtdb.europe-west1.firebasedatabase.app"
+);
 
     // Ruta donde guardaremos TODO el stock
     const stockRef = ref(db, "stockEnologico");
