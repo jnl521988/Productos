@@ -812,11 +812,58 @@
 </script>
 
 
-  <!-- =====================================================
-       JAVASCRIPT DEL PROGRAMA
-  ====================================================== -->
+<!-- =====================================================
+     FIREBASE
+====================================================== -->
 
-  <script src="script.js"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import {
+        getDatabase,
+        ref,
+        set,
+        onValue
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDxEFNqdHu15qsu31K2d6kNwr5e_69aq7U",
+        authDomain: "stock-enologico.firebaseapp.com",
+        projectId: "stock-enologico",
+        storageBucket: "stock-enologico.firebasestorage.app",
+        messagingSenderId: "661204852361",
+        appId: "1:661204852361:web:9a93dae34fb52bb0cfb058"
+    };
+
+    // Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+
+    // Inicializar Realtime Database
+    const db = getDatabase(app);
+
+    // Ruta donde guardaremos TODO el stock
+    const stockRef = ref(db, "stockEnologico");
+
+    // Dejamos las funciones disponibles para script.js
+    window.firebaseStock = {
+        db: db,
+        ref: stockRef,
+        set: set,
+        onValue: onValue
+    };
+
+    console.log("Firebase conectado correctamente.");
+
+    window.dispatchEvent(
+    new Event("firebase-ready")
+);
+</script>
+
+
+<!-- =====================================================
+     JAVASCRIPT DEL PROGRAMA
+====================================================== -->
+
+<script src="script.js"></script>
 
 </body>
 </html>

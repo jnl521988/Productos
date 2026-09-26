@@ -62,6 +62,14 @@ let claseActual = CLASES[0];
 
 let busqueda = "";
 
+// ============================================================
+// FIREBASE
+// ============================================================
+
+let firebaseSincronizado = false;
+let firebaseEscuchando = false;
+let primeraLecturaFirebase = true;
+
 
 // ============================================================
 // FUNCIONES AUXILIARES
@@ -312,10 +320,48 @@ function guardar() {
 
     try {
 
+        // ----------------------------------------------------
+        // 1. GUARDAR SIEMPRE EN LOCALSTORAGE
+        // ----------------------------------------------------
+
         localStorage.setItem(
             STORAGE_KEY,
             JSON.stringify(datos)
         );
+
+
+        // ----------------------------------------------------
+        // 2. GUARDAR EN FIREBASE
+        // ----------------------------------------------------
+
+        if (
+            window.firebaseStock &&
+            firebaseSincronizado
+        ) {
+
+            window.firebaseStock
+                .set(datos)
+                .then(function () {
+
+                    console.log(
+                        "Datos guardados en Firebase correctamente."
+                    );
+
+                })
+                .catch(function (error) {
+
+                    console.error(
+                        "Error guardando en Firebase:",
+                        error
+                    );
+
+                    toast(
+                        "Guardado local correcto, pero hubo un error con Firebase."
+                    );
+
+                });
+
+        }
 
     } catch (error) {
 
@@ -325,10 +371,233 @@ function guardar() {
         );
 
         alert(
-            "No se pudieron guardar los datos en el navegador."
+            "No se pudieron guardar los datos."
         );
 
     }
+
+}
+
+
+// ============================================================
+// SINCRONIZACIÓN CON FIREBASE
+// ============================================================
+
+function iniciarSincronizacionFirebase() {
+
+    if (!window.firebaseStock) {
+
+        console.warn(
+            "Firebase todavía no está disponible."
+        );
+
+        return;
+
+    }
+
+
+    if (firebaseEscuchando) {
+
+        return;
+
+    }
+
+
+    firebaseEscuchando = true;
+
+
+    console.log(
+        "Iniciando sincronización con Firebase..."
+    );
+
+
+    window.firebaseStock.onValue(
+
+        window.firebaseStock.ref,
+
+        function (snapshot) {
+
+            try {
+
+                const datosRemotos =
+                    snapshot.val();
+
+
+                // =================================================
+                // PRIMERA LECTURA
+                // =================================================
+
+                if (primeraLecturaFirebase) {
+
+                    primeraLecturaFirebase = false;
+
+
+                    // ---------------------------------------------
+                    // FIREBASE TIENE DATOS
+                    // ---------------------------------------------
+
+                    if (
+                        datosRemotos &&
+                        Array.isArray(
+                            datosRemotos.productos
+                        ) &&
+                        Array.isArray(
+                            datosRemotos.movimientos
+                        )
+                    ) {
+
+                        console.log(
+                            "Datos encontrados en Firebase."
+                        );
+
+
+                        datos =
+                            normalizarImportacion(
+                                datosRemotos
+                            );
+
+
+                        localStorage.setItem(
+                            STORAGE_KEY,
+                            JSON.stringify(datos)
+                        );
+
+
+                    }
+
+                    // ---------------------------------------------
+                    // FIREBASE ESTÁ VACÍO
+                    // ---------------------------------------------
+
+                    else {
+
+                        console.log(
+                            "Firebase está vacío. Subiendo datos locales..."
+                        );
+
+
+                        window.firebaseStock
+                            .set(datos)
+                            .then(function () {
+
+                                console.log(
+                                    "Datos locales subidos a Firebase."
+                                );
+
+                            })
+                            .catch(function (error) {
+
+                                console.error(
+                                    "Error subiendo datos iniciales:",
+                                    error
+                                );
+
+                            });
+
+                    }
+
+
+                    firebaseSincronizado = true;
+
+
+                    actualizarPantallaTrasSincronizacion();
+
+
+                    return;
+
+                }
+
+
+                // =================================================
+                // LECTURAS POSTERIORES
+                // =================================================
+
+                if (
+                    datosRemotos &&
+                    Array.isArray(
+                        datosRemotos.productos
+                    ) &&
+                    Array.isArray(
+                        datosRemotos.movimientos
+                    )
+                ) {
+
+                    datos =
+                        normalizarImportacion(
+                            datosRemotos
+                        );
+
+
+                    localStorage.setItem(
+                        STORAGE_KEY,
+                        JSON.stringify(datos)
+                    );
+
+
+                    actualizarPantallaTrasSincronizacion();
+
+
+                    console.log(
+                        "Datos actualizados desde Firebase."
+                    );
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Error procesando datos de Firebase:",
+                    error
+                );
+
+            }
+
+        }
+
+    );
+
+}
+
+// ============================================================
+// ACTUALIZAR PANTALLA DESPUÉS DE RECIBIR FIREBASE
+// ============================================================
+
+function actualizarPantallaTrasSincronizacion() {
+
+    try {
+
+        renderNav();
+
+
+        if (claseActual === "__historial") {
+
+            mostrarHistorial();
+
+            return;
+
+        }
+
+
+        if (claseActual === "__informe") {
+
+            mostrarInforme();
+
+            return;
+
+        }
+
+
+        renderClase();
+
+    } catch (error) {
+
+        console.error(
+            "Error actualizando la pantalla:",
+            error
+        );
+
+    }
+
 }
 
 
@@ -678,6 +947,24 @@ function init() {
         // BOTONES DE CIERRE
 
         prepararCierres();
+
+        // ========================================================
+// INICIAR SINCRONIZACIÓN FIREBASE
+// ========================================================
+
+if (window.firebaseStock) {
+
+    iniciarSincronizacionFirebase();
+
+} else {
+
+    window.addEventListener(
+        "firebase-ready",
+        iniciarSincronizacionFirebase,
+        { once: true }
+    );
+
+}
 
 
         console.log(
@@ -3076,15 +3363,15 @@ function mostrarInforme() {
             }
 
 
-           // ------------------------------------------------
+           // -----------------------------------------------
 // CHIPS FERMENTACIÓN
-// 2 g / LITRO DE VINO
-// Rendimiento: 0,75 L vino / kg uva
-// ------------------------------------------------
+// 2 g / 100 kg de uva
+// -----------------------------------------------
 
 else if (
     claseNormalizada ===
-    "chips fermentación" ||
+    "chips fermentación"
+    ||
     claseNormalizada ===
     "chips fermentacion"
 ) {
@@ -3093,19 +3380,10 @@ else if (
         stock * 1000;
 
 
-    // Litros de vino que se pueden tratar
-    const litros =
-        gramos / 2;
-
-
-    // Conversión de litros de vino
-    // a kg de uva
     rendimiento =
-        litros /
-        0.75;
+        gramos * 100 / 2;
 
 }
-
 
             // =================================================
             // MOSTRAR FILA
@@ -5529,15 +5807,15 @@ doc.text(
             }
 
 
-          // ------------------------------------------------
+          // -----------------------------------------------
 // CHIPS FERMENTACIÓN
-// 2 g / LITRO DE VINO
-// Rendimiento: 0,75 L vino / kg uva
-// ------------------------------------------------
+// 2 g / 100 kg de uva
+// -----------------------------------------------
 
 else if (
     claseNormalizada ===
-    "chips fermentación" ||
+    "chips fermentación"
+    ||
     claseNormalizada ===
     "chips fermentacion"
 ) {
@@ -5546,16 +5824,8 @@ else if (
         stock * 1000;
 
 
-    // Litros de vino que se pueden tratar
-    const litros =
-        gramos / 2;
-
-
-    // Conversión de litros de vino
-    // a kg de uva
     rendimiento =
-        litros /
-        0.75;
+        gramos * 100 / 2;
 
 }
 

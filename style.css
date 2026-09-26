@@ -2185,16 +2185,24 @@ label textarea {
     }
 
 }
+
 /* =========================================================
    COLOR DE FONDO DE LAS TARJETAS SEGÚN EL STOCK
    ========================================================= */
 
 /* Stock agotado: rojo muy suave */
 .product-card.zero {
-    background: #fff1f1;
+    background: #eeb3b3;
 }
 
-/* Stock bajo: naranja muy suave */
+/* Stock bajo o igual al mínimo: naranja muy suave */
 .product-card.low {
-    background: #fff7ed;
+    background: #edd399;
+}
+
+/* Stock normal: fondo normal */
+.product-card {
+    transition:
+        background-color 0.25s ease,
+        box-shadow 0.25s ease;
 }
