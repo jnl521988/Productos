@@ -340,14 +340,17 @@ function guardar() {
         ) {
 
             window.firebaseStock
-                .set(datos)
-                .then(function () {
+    .set(
+        window.firebaseStock.ref,
+        datos
+    )
+    .then(function () {
 
-                    console.log(
-                        "Datos guardados en Firebase correctamente."
-                    );
+        console.log(
+            "Datos guardados en Firebase correctamente."
+        );
 
-                })
+    })
                 .catch(function (error) {
 
                     console.error(
