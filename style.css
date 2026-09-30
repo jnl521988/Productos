@@ -1,2208 +1,394 @@
-/* =========================================================
-   STOCK ENOLÓGICO
-   ESTILOS GENERALES
-========================================================= */
+/* Copiado y extendido del original con clases nuevas para sala */
+*{box-sizing:border-box}
 
-* {
-  box-sizing: border-box;
+:root{
+  --bg:#d2b4d9;
+  --card:#b3c8cf;
+  --accent:#281fd6;
+  --green:#1c9026;
+  --muted:#6b7280;
+  --text:#101112;
+
+  --tinto-dark: #5B0B15;
+  --rosado: #ff69b4; /* rosa brillante */
+  --blanco: #D6B34A;
+  --circle-bg: #e9e9ea;
+  --brown: #8B5A2B;
+  --greenbar: #2e8b57;
+  --loquillo: #6b2b8f;
 }
 
-:root {
-  --primary: #7b2454;
-  --primary-dark: #5e193f;
-  --primary-light: #a33b70;
+body{margin:0;font-family:Inter, Arial, Helvetica, sans-serif;background:var(--bg);color:var(--text);padding:18px}
+.screen{max-width:1150px;margin:18px auto}
+.hidden{display:none}
+.home-grid{display:grid;gap:20px;grid-template-columns:1fr;padding:24px;justify-items:center}
+.big-btn{width:90%;max-width:420px;padding:26px;border-radius:12px;border:0;font-size:20px;font-weight:800;background:linear-gradient(180deg,#1f8dd6,#157fb6);color:rgb(231,231,237);cursor:pointer}
+.big-btn.alt{background:linear-gradient(180deg,#1f8dd6,#157fb6);color:#fff}
+.big-btn.alt2{background:linear-gradient(180deg,#1f8dd6,#157fb6);color:#fff}
+.screen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.btn-back{background:#111827;color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+.card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+.card.narrow{max-width:720px;margin:0 auto}
+.table{width:100%;border-collapse:collapse;margin-bottom:12px}
+.table th,.table td{padding:10px;border:1px solid #e6e9ee;text-align:center}
+.thead-green th{background:var(--green);color:#000;font-weight:800;text-transform:uppercase}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.actions button{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:10px;cursor:pointer}
+.small{padding:8px 10px;border-radius:8px;background:#475569;color:#fff;border:0;cursor:pointer}
+.results{background:#fbfdff;border:1px solid #e6eef9;padding:12px;border-radius:8px;margin-top:12px}
+.label-green{display:block;background:var(--green);padding:8px;border-radius:8px;font-weight:800;text-transform:uppercase;margin-top:10px}
+input[type="number"],input[type="text"],select{width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:15px;margin-top:8px}
+.inline-info{font-size:16px}
 
-  --background: #f5f3f5;
-  --card: #ffffff;
+.table th.col-carac, .table td.col-carac, .table th.col-vino, .table td.col-vino {min-width:220px}
+#bodegaTable th.col-carac, #bodegaTable td.col-carac { min-width:220px; text-align:left; }
+#barrTable th.col-vino, #barrTable td.col-vino { min-width:220px; text-align:left; }
+.card .table { display: block; overflow-x: auto; white-space: nowrap; }
+.map-container{display:flex;flex-direction:column;gap:18px;padding:10px 6px}
+.map-row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+.dep {width:100px;height:100px;border-radius:50%;background:var(--circle-bg);position:relative;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,0.10);cursor:pointer;border:3px solid rgba(0,0,0,0.08)}
+.dep .fill {position:absolute;bottom:0;left:0;width:100%;border-radius:50%;transform-origin:center bottom;z-index:2;opacity:0.98}
+.dep .center {position:relative;z-index:4;text-align:center;pointer-events:none;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6)}
+.dep .center .dnum { font-weight:800; font-size:15px; display:block; }
+.dep .center .dpct { font-size:13px; display:block; margin-top:2px; }
+.dep-wrap {display:flex;flex-direction:column;align-items:center;gap:6px}
+.dep-caption {font-size:12px;color:#0b0b0b;margin-top:6px;text-align:center}
+.dep .pct {position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.85);color:#111;padding:4px 6px;border-radius:6px;font-size:12px;z-index:5}
+.bodega-highlight {animation: highlightRow 2s ease}
+@keyframes highlightRow {0% { background: #fff3cd; }100% { background: transparent; }}
+@media (max-width:720px){.dep { width:86px; height:86px; }.dep .center .dnum { font-size:13px; } .dep .center .dpct { font-size:12px; } .dep-caption { font-size:11px; }}
 
-  --text: #252329;
-  --muted: #6f6870;
+/* ================= SALA BARRICAS ================= */
 
-  --border: #ddd6dc;
+/* Layout general */
+.sala-layout{
+  display:flex;
+  gap:12px;
+  margin-top:12px;
+  align-items:flex-start; /* evita estiramientos */
+}
 
-  --danger: #b42318;
-  --danger-light: #f9e7e5;
+/* ---------- PANEL LATERAL ---------- */
+.sala-panel{
+  width:220px;
+  min-width:220px;
+  background:#f7f7f8;
+  padding:12px;
+  border-radius:12px;
+  flex-shrink:0;
+  align-self:flex-start;
+}
 
-  --success: #20744a;
-  --success-light: #e5f4eb;
+/* Paleta */
+.palette{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:flex-start;
+}
 
-  --warning: #a35b00;
-  --warning-light: #fff1dc;
+/* Cuadraditos */
+.pallet-item{
+  width:44px;
+  height:44px;
+  aspect-ratio:1/1;
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:800;
+  color:#fff;
+  cursor:grab;
+  flex:0 0 auto;
+  user-select:none;
+  border:2px solid rgba(0,0,0,0.15);
+}
 
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+/* ---------- COLORES BARRICAS ---------- */
+.pallet-MO{ background:#5B0B15; }   /* MO1-4 */
+.pallet-MM{ background:#8B5A2B; }   /* MM1-4 */
+.pallet-AB{ background:#2e8b57; }   /* AB1-2 */
+.pallet-PL{ background:#6b7280; }   /* PL1-2 */
+.pallet-DV{ background:#1c9026; }
+.pallet-divina{
+  border-radius:50%;
+}
+.divina-cell{
+  border-radius:50% !important;
+}
+.pallet-LQ{ background:#6b2b8f; }
+.pallet-RS{ background:#ff69b4; }
+.pallet-EP{ background:#d6d31f; }
+.pallet-300{ background:#D6B34A; color:#111; }
+.pallet-500{ background:#101112; }
+
+.sala-cell .count{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ---------- GRID ---------- */
+.sala-grid-wrap{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-width:0;
+}
+
+/* Cuadrícula fija 18x10 */
+.sala-grid{
+  display:grid;
+  grid-template-columns:repeat(18,1fr);
+  grid-template-rows:repeat(10,1fr);
+  width:100%;
+  aspect-ratio:18/10;
+  gap:4px;
+  background:#fff;
+  padding:6px;
+  border-radius:8px;
+  border:1px solid #e6e6e6;
+  box-sizing:border-box;
+}
+
+/* Celdas */
+.sala-cell{
+  background:#f1f5f9;
+  border:1px dashed #d1d5db;
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+/* Contenido de la celda */
+.sala-cell .count{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:clamp(9px,1.4vw,16px);
+  font-weight:800;
+  color:#fff;
+  border-radius:6px;
+}
+
+/* ---------- MÓVIL ---------- */
+@media (max-width:720px){
+  .sala-layout{
+    flex-direction:column; /* panel arriba */
+  }
+
+  .sala-panel{
+    width:100%;
+    min-width:0;
+  }
+
+  .palette{
+    justify-content:center;
+  }
+
+  .pallet-item{
+    width:40px;
+    height:40px;
+    font-size:11px;
+  }
+
+  .sala-grid{
+    width:100%;
+    gap:3px;
+  }
+}
+/* contenedor de título + grid */
+.sala-main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+
+/* título de la sala */
+.sala-title{
+  text-align:center;
+  font-size:16px;
+  font-weight:800;
 }
 
 
-/* =========================================================
-   BODY
-========================================================= */
+/* badges */
+.badge-small{font-size:11px;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,0.6)}
 
-body {
-  margin: 0;
+/* responsive */
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+.sala-cell .cell-label{display:none}
+#nave1, #nave2{
+  margin-bottom:20px;
+  padding:10px;
+  border-radius:12px;
+  background: #a2a6a7;
+}
 
-  background: var(--background);
+#nave1 h3, #nave2 h3{
+  text-align:center;
+  font-weight:800;
+  margin-bottom:10px;
+  background: rgba(210, 110, 187, 0.659);
+  padding:6px;
+  border-radius:8px;
+}
+/* ===== CONTENEDOR PARA LOS BOTONES BACKUP ===== */
+.backup-row{
+  display:flex;
+  justify-content:center; /* centra el grupo */
+  gap:14px;               /* espacio entre los dos */
+  margin-top:14px;
+  flex-wrap:wrap;         /* en móvil se ponen uno debajo del otro */
+}
 
-  color: var(--text);
+/* ===== BOTONES BACKUP (más pequeños) ===== */
+#exportBackup,
+#importBackup{
+  width:160px;
+  padding:14px 10px;
+  font-size:14px;
+  font-weight:700;
+  border-radius:10px;
+  box-shadow:0 5px 12px rgba(0,0,0,0.15);
+  transition:transform .08s ease, box-shadow .08s ease, filter .1s;
+}
 
-  min-height: 100vh;
+/* VERDE EXPORTAR */
+#exportBackup{
+  background:linear-gradient(180deg,#2e7d32,#1b5e20);
+  color:#fff;
+}
+
+/* ROJO IMPORTAR */
+#importBackup{
+  background:linear-gradient(180deg,#c62828,#8e0000);
+  color:#fff;
+}
+
+#exportBackup:hover,
+#importBackup:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 16px rgba(0,0,0,0.18);
+  filter:brightness(1.05);
+}
+
+#exportBackup:active,
+#importBackup:active{
+  transform:translateY(0);
+  box-shadow:0 4px 8px rgba(0,0,0,0.15);
+}
+/* ===== CRIANZA BARRICAS ===== */
+.crianza-cell{
+  font-weight:700;
+}
+
+.crianza-aviso{
+  background:#d77373;   /* ámbar */
+  color:#111;
+  font-weight:800;
+  border-radius:6px;
+}
+.crianza-peligro{
+  background:#8b1e1e;  /* rojo oscuro potente */
+  color:#fff;
+  font-weight:900;
+  border-radius:6px;
 }
 
 
-/* =========================================================
-   ELEMENTOS GENERALES
-========================================================= */
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-}
-
-.hidden {
-  display: none !important;
-}
-
-
-/* =========================================================
-   CABECERA SUPERIOR
-========================================================= */
-
-.topbar {
-
-  position: sticky;
-
-  top: 0;
-
-  z-index: 20;
-
-  background: #ffffff;
-
-  border-bottom:
-    1px solid var(--border);
-
-  padding: 12px 18px;
-
+/* Panel de totales debajo de la cuadrícula */
+#panel-totales-barricas {
   display: flex;
-
-  gap: 18px;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-
-/* =========================================================
-   MARCA / TÍTULO
-========================================================= */
-
-.brand {
-
-  display: flex;
-
-  gap: 10px;
-
-  align-items: center;
-
-  min-width: 210px;
-}
-
-
-.brand-icon {
-
-  font-size: 31px;
-
-  line-height: 1;
-}
-
-
-.brand h1 {
-
-  font-size: 19px;
-
-  margin: 0 0 2px 0;
-
-  color: var(--text);
-}
-
-
-.brand small {
-
-  color: var(--muted);
-
-  font-size: 12px;
-}
-
-
-/* =========================================================
-   BOTONES PRINCIPALES
-========================================================= */
-
-.top-actions {
-
-  display: flex;
-
-  gap: 8px;
-
-  flex-wrap: wrap;
-
-  justify-content: flex-end;
-}
-
-
-.btn {
-
-  border:
-    1px solid #cfc6cd;
-
-  background: #ffffff;
-
-  color: var(--text);
-
-  padding: 9px 12px;
-
-  border-radius: 9px;
-
-  font-weight: 600;
-
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.1s ease;
-}
-
-
-.btn:hover {
-
-  background: #f1edf0;
-}
-
-
-.btn:active {
-
-  transform: translateY(1px);
-}
-
-
-.btn.primary {
-
-  background: var(--primary);
-
-  color: #ffffff;
-
-  border-color: var(--primary);
-}
-
-
-.btn.primary:hover {
-
-  background: var(--primary-light);
-
-  border-color: var(--primary-light);
-}
-
-
-.btn.danger {
-
-  color: var(--danger);
-
-  border-color: #e1b7b4;
-
-  background: #ffffff;
-}
-
-
-.btn.danger:hover {
-
-  background: var(--danger-light);
-}
-
-
-/* =========================================================
-   IMPORTAR JSON
-========================================================= */
-
-.file-btn {
-
-  position: relative;
-
-  overflow: hidden;
-
-  display: inline-flex;
-
-  align-items: center;
-
-  justify-content: center;
-}
-
-
-.file-btn input {
-
-  position: absolute;
-
-  inset: 0;
-
-  opacity: 0;
-
-  cursor: pointer;
-
-  width: 100%;
-
-  height: 100%;
-}
-
-
-/* =========================================================
-   CONTENEDOR PRINCIPAL
-========================================================= */
-
-main {
-
-  max-width: 1500px;
-
-  margin: 0 auto;
-
-  padding:
-    14px 18px 40px;
-}
-
-
-/* =========================================================
-   NAVEGACIÓN DE CLASES
-========================================================= */
-
-.class-nav {
-
-  display: flex;
-
-  gap: 7px;
-
-  overflow-x: auto;
-
-  padding:
-    3px 0 12px;
-
-  scrollbar-width: thin;
-
-  -webkit-overflow-scrolling: touch;
-}
-
-
-.class-nav::-webkit-scrollbar {
-
-  height: 5px;
-}
-
-
-.class-nav::-webkit-scrollbar-thumb {
-
-  background: #c7bdc4;
-
-  border-radius: 10px;
-}
-
-
-.class-nav button {
-
-  white-space: nowrap;
-
-  border:
-    1px solid var(--border);
-
-  background: #ffffff;
-
-  border-radius: 20px;
-
-  padding:
-    8px 13px;
-
-  color: #4d454c;
-
-  font-weight: 600;
-
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
-}
-
-
-.class-nav button:hover {
-
-  background: #eee8ec;
-}
-
-
-.class-nav button.active {
-
-  background: var(--primary);
-
-  color: #ffffff;
-
-  border-color: var(--primary);
-}
-
-
-/* =========================================================
-   CABECERA DE PÁGINA
-========================================================= */
-
-.page-head {
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  gap: 15px;
-
-  margin:
-    10px 0 15px;
-}
-
-
-.page-head h2 {
-
-  margin:
-    0 0 4px;
-
-  font-size: 24px;
-}
-
-
-.page-head p {
-
-  margin: 0;
-
-  color: var(--muted);
-
-  font-size: 14px;
-}
-
-
-/* =========================================================
-   BUSCADOR
-========================================================= */
-
-.search-wrap {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 7px;
-
-  background: #ffffff;
-
-  border:
-    1px solid var(--border);
-
-  border-radius: 10px;
-
-  padding:
-    0 11px;
-
-  min-width: 280px;
-
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.03);
-}
-
-
-.search-wrap span {
-
-  font-size: 16px;
-}
-
-
-.search-wrap input {
-
-  border: 0;
-
-  outline: 0;
-
-  padding:
-    11px 3px;
-
-  width: 100%;
-
-  background: transparent;
-}
-
-
-.search-wrap input::placeholder {
-
-  color: #99929a;
-}
-
-
-/* =========================================================
-   TARJETAS DE PRODUCTOS
-========================================================= */
-
-.product-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      auto-fill,
-      minmax(320px, 1fr)
-    );
-
-  gap: 13px;
-}
-
-
-/* =========================================================
-   TARJETA INDIVIDUAL
-========================================================= */
-
-.product-card {
-
-  background: var(--card);
-
-  border:
-    1px solid var(--border);
-
-  border-radius: 14px;
-
-  padding: 15px;
-
-  box-shadow: var(--shadow);
-
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-
-.product-card:hover {
-
-  transform:
-    translateY(-2px);
-
-  box-shadow:
-    0 5px 15px rgba(0, 0, 0, 0.09);
-}
-
-
-/* =========================================================
-   TARJETA CON BAJO STOCK
-========================================================= */
-
-.product-card.low {
-
-  border-left:
-    5px solid #d48a22;
-}
-
-
-/* =========================================================
-   TARJETA SIN STOCK
-========================================================= */
-
-.product-card.zero {
-
-  border-left:
-    5px solid var(--danger);
-}
-
-
-/* =========================================================
-   PARTE SUPERIOR TARJETA
-========================================================= */
-
-.product-top {
-
-  display: flex;
-
-  justify-content: space-between;
-
-  gap: 10px;
-
-  align-items: flex-start;
-}
-
-
-.product-name {
-
-  font-size: 18px;
-
-  font-weight: 700;
-
-  margin:
-    0 0 4px;
-}
-
-
-.meta {
-
-  color: var(--muted);
-
-  font-size: 13px;
-
-  line-height: 1.4;
-}
-
-
-/* =========================================================
-   ETIQUETA DE CLASE
-========================================================= */
-
-.badge {
-
-  display: inline-block;
-
-  padding:
-    4px 7px;
-
-  border-radius: 8px;
-
-  font-size: 12px;
-
-  background: #eee7ec;
-
-  color: #5d4b57;
-
-  white-space: nowrap;
-}
-
-
-/* =========================================================
-   STOCK PRINCIPAL
-========================================================= */
-
-.stock-big {
-
-  font-size: 25px;
-
-  font-weight: 700;
-
-  margin:
-    12px 0 2px;
-}
-
-
-.stock-label {
-
-  color: var(--muted);
-
-  font-size: 12px;
-}
-
-
-/* =========================================================
-   AVISO DE BAJO STOCK
-========================================================= */
-
-.stock-warn {
-
-  color: var(--warning);
-
-  background: var(--warning-light);
-
-  border-radius: 7px;
-
-  padding:
-    6px 8px;
-
-  font-weight: 700;
-
-  font-size: 13px;
-
-  margin-top: 7px;
-}
-
-
-/* =========================================================
-   MINI LISTA DE LOTES
-========================================================= */
-
-.lots-mini {
-
-  margin-top: 11px;
-
-  border-top:
-    1px solid var(--border);
-
-  padding-top: 9px;
-}
-
-
-.lot-line {
-
-  display: flex;
-
-  justify-content: space-between;
-
-  gap: 8px;
-
-  padding:
-    5px 0;
-
-  font-size: 13px;
-}
-
-
-.lot-line strong {
-
-  font-size: 14px;
-}
-
-
-/* =========================================================
-   BOTONES TARJETA
-========================================================= */
-
-.card-actions {
-
-  display: flex;
-
-  gap: 7px;
-
-  flex-wrap: wrap;
-
-  margin-top: 13px;
-}
-
-
-.card-actions .btn {
-
-  padding:
-    7px 9px;
-
-  font-size: 13px;
-}
-
-
-/* =========================================================
-   RESUMEN DE CLASE
-========================================================= */
-
-.summary {
-
-  margin-top: 16px;
-
-  background: #ffffff;
-
-  border:
-    1px solid var(--border);
-
-  border-radius: 13px;
-
-  padding: 13px;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(6, 1fr);
-
-  gap: 8px;
-
-  box-shadow: var(--shadow);
-}
-
-
-.summary-item {
-
-  padding: 9px;
-
-  border-radius: 9px;
-
-  background: #f6f2f5;
-}
-
-
-.summary-item b {
-
-  display: block;
-
-  font-size: 18px;
-
-  margin-bottom: 3px;
-}
-
-
-.summary-item span {
-
-  font-size: 12px;
-
-  color: var(--muted);
-}
-
-
-/* =========================================================
-   VISTA DETALLE PRODUCTO
-========================================================= */
-
-.detail-card {
-
-  background: #ffffff;
-
-  border:
-    1px solid var(--border);
-
-  border-radius: 14px;
-
-  padding: 18px;
-
-  box-shadow: var(--shadow);
-}
-
-
-.detail-head {
-
-  display: flex;
-
-  justify-content: space-between;
-
-  gap: 12px;
-
-  align-items: flex-start;
-}
-
-
-.detail-title {
-
-  font-size: 25px;
-
-  margin:
-    12px 0 5px;
-}
-
-
-.detail-info {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(4, 1fr);
-
-  gap: 9px;
-
-  margin:
-    16px 0;
-}
-
-
-.info-box {
-
-  background: #f7f4f6;
-
-  border-radius: 10px;
-
-  padding: 10px;
-}
-
-
-.info-box > span {
-
-  display: block;
-
-  color: var(--muted);
-
-  font-size: 12px;
-
-  margin-bottom: 4px;
-}
-
-
-/* =========================================================
-   CARACTERÍSTICAS
-========================================================= */
-
-.characteristics {
-
-  background: #faf8fa;
-
-  border:
-    1px solid var(--border);
-
-  padding: 11px;
-
-  border-radius: 10px;
-
-  white-space: pre-wrap;
-
-  line-height: 1.45;
-
-  font-weight: normal;
-}
-
-
-/* =========================================================
-   CABECERA DE LOTES
-========================================================= */
-
-.section-head {
-
-  display: flex;
-
-  justify-content: space-between;
-
-  align-items: center;
-
-  gap: 10px;
-
-  margin:
-    20px 0 10px;
-}
-
-
-.section-head h3 {
-
-  margin: 0;
-
-  font-size: 18px;
-}
-
-
-/* =========================================================
-   TARJETA DE LOTE
-========================================================= */
-
-.lot-card {
-
-  border:
-    1px solid var(--border);
-
-  border-radius: 12px;
-
-  margin-bottom: 10px;
-
-  overflow: hidden;
-
-  background: #ffffff;
-}
-
-
-/* =========================================================
-   CABECERA DEL LOTE
-========================================================= */
-
-.lot-head {
-
-  background: #f7f4f6;
-
-  padding:
-    11px 13px;
-
-  display: flex;
-
-  justify-content: space-between;
-
-  align-items: center;
-
-  gap: 10px;
-}
-
-
-.lot-head h4 {
-
-  margin: 0;
-
-  font-size: 16px;
-}
-
-
-/* =========================================================
-   CUERPO DEL LOTE
-========================================================= */
-
-.lot-body {
-
-  padding: 12px;
-}
-
-
-/* =========================================================
-   ESTADÍSTICAS DEL LOTE
-========================================================= */
-
-.lot-stats {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(4, 1fr);
-
-  gap: 8px;
-}
-
-
-.lot-stat {
-
-  padding: 9px;
-
-  background: #fafafa;
-
-  border:
-    1px solid var(--border);
-
-  border-radius: 8px;
-}
-
-
-.lot-stat span {
-
-  font-size: 11px;
-
-  color: var(--muted);
-
-  display: block;
-
-  margin-bottom: 3px;
-}
-
-
-.lot-stat b {
-
-  font-size: 17px;
-}
-
-
-/* =========================================================
-   BOTONES DEL LOTE
-========================================================= */
-
-.lot-actions {
-
-  display: flex;
-
-  gap: 7px;
-
-  flex-wrap: wrap;
-
-  margin-top: 10px;
-}
-
-
-/* =========================================================
-   TABLAS
-========================================================= */
-
-.table-card {
-
-  background: #ffffff;
-
-  border:
-    1px solid var(--border);
-
-  border-radius: 13px;
-
-  overflow: auto;
-
-  box-shadow: var(--shadow);
-}
-
-
-.data-table {
-
-  border-collapse: collapse;
-
-  width: 100%;
-
-  min-width: 850px;
-}
-
-
-.data-table th,
-.data-table td {
-
-  border-bottom:
-    1px solid var(--border);
-
-  padding:
-    9px 10px;
-
-  text-align: left;
-
-  font-size: 13px;
-
-  vertical-align: middle;
-}
-
-
-.data-table th {
-
-  background: #f4f0f3;
-
-  font-weight: 700;
-
-  color: #40383f;
-
-  position: sticky;
-
-  top: 0;
-
-  z-index: 2;
-}
-
-
-.data-table tbody tr:hover {
-
-  background: #faf8fa;
-}
-
-
-.data-table tbody tr:last-child td {
-
-  border-bottom: 0;
-}
-
-
-/* =========================================================
-   ENTRADAS Y CONSUMOS
-========================================================= */
-
-.entrada {
-
-  color: var(--success);
-
-  font-weight: 700;
-}
-
-
-.consumo {
-
-  color: var(--danger);
-
-  font-weight: 700;
-}
-
-
-/* =========================================================
-   MODALES
-========================================================= */
-
-.modal {
-
-  position: fixed;
-
-  inset: 0;
-
-  background:
-    rgba(0, 0, 0, 0.53);
-
-  z-index: 50;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  padding: 15px;
-}
-
-
-.modal-box {
-
-  width:
-    min(680px, 100%);
-
-  max-height: 92vh;
-
-  overflow-y: auto;
-
-  background: #ffffff;
-
-  border-radius: 15px;
-
-  box-shadow:
-    0 15px 50px rgba(0, 0, 0, 0.32);
-}
-
-
-.modal-box.small {
-
-  width:
-    min(470px, 100%);
-}
-
-
-/* =========================================================
-   CABECERA MODAL
-========================================================= */
-
-.modal-head {
-
-  display: flex;
-
-  justify-content: space-between;
-
-  align-items: center;
-
-  padding:
-    15px 18px;
-
-  border-bottom:
-    1px solid var(--border);
-
-  position: sticky;
-
-  top: 0;
-
-  background: #ffffff;
-
-  z-index: 3;
-}
-
-
-.modal-head h3 {
-
-  margin: 0;
-
-  font-size: 19px;
-}
-
-
-.icon-btn {
-
-  border: 0;
-
-  background: transparent;
-
-  font-size: 28px;
-
-  line-height: 1;
-
-  color: #666;
-
-  padding: 0 3px;
-}
-
-
-.icon-btn:hover {
-
-  color: var(--danger);
-}
-
-
-/* =========================================================
-   FORMULARIOS
-========================================================= */
-
-.modal-box form {
-
-  padding: 18px;
-}
-
-
-.form-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    1fr 1fr;
-
-  gap: 12px;
-}
-
-
-.form-grid .full {
-
-  grid-column: 1 / -1;
-}
-
-
-label {
-
-  display: flex;
-
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+  padding: 8px 0;
 
-  gap: 5px;
-
-  font-weight: 600;
-
-  font-size: 13px;
+  background-color: #efe6d6;   /* ← COLOR DEL BLOQUE GRANDE */
+  border: 2px solid #8e2a2a;    /* marco vino elegante */
+  border-radius: 10px;
 }
 
 
-label input,
-label select,
-label textarea {
+/* Totales individuales */
+#total-sala-actual, #total-global {
+  font-size:16px;
+  text-align:center;
+}
 
-  border:
-    1px solid #cfc6cd;
-
-  border-radius: 8px;
-
-  padding: 10px;
-
-  background: #ffffff;
-
-  outline: none;
-
-  color: var(--text);
+.note-item.highlight{
+  background:#ffeaa7;
+  border-radius:6px;
+  padding:2px 4px;
+}
+.vaciar-pendiente {
+  background-color: #e3e3ba;
 }
 
 
-label input:focus,
-label select:focus,
-label textarea:focus {
+@media print {
+  .vaciar-pendiente td {
+    background: #e3e3ba !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 
-  border-color:
-    var(--primary);
-
-  box-shadow:
-    0 0 0 2px rgba(123, 36, 84, 0.08);
+  table td, table th {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
 
-
-label textarea {
-
-  resize: vertical;
-
-  min-height: 90px;
+/* ===== ANCHO COLUMNA AÑADA - BARRICAS ===== */
+#barrTable th:nth-child(5),
+#barrTable td:nth-child(5) {
+  min-width: 100px;
+  width: 100px;
 }
 
-
-/* =========================================================
-   PIE DEL MODAL
-========================================================= */
-
-.modal-foot {
-
-  display: flex;
-
-  justify-content: flex-end;
-
-  gap: 8px;
-
-  margin-top: 17px;
-}
-
-
-/* =========================================================
-   HISTORIAL
-========================================================= */
-
-.history-actions {
-
-  display: flex;
-
-  gap: 8px;
-
-  flex-wrap: wrap;
-}
-
-
-/* =========================================================
-   MENSAJE VACÍO
-========================================================= */
-
-.empty {
-
-  background: #ffffff;
-
-  border:
-    1px dashed var(--border);
-
-  border-radius: 13px;
-
-  padding: 35px;
-
-  text-align: center;
-
-  color: var(--muted);
-
+#barrTable .b_anyada {
   width: 100%;
 }
 
 
-/* =========================================================
-   AVISOS TOAST
-========================================================= */
+/* ===== ANCHO COLUMNA AÑADA - MEZCLAS ===== */
+#mixTable th:nth-child(7),
+#mixTable td:nth-child(7) {
+  min-width: 100px;
+  width: 100px;
+}
 
-.toast {
-
-  position: fixed;
-
-  right: 18px;
-
-  bottom: 18px;
-
-  background: #252329;
-
-  color: #ffffff;
-
-  padding:
-    11px 15px;
-
-  border-radius: 9px;
-
-  opacity: 0;
-
-  transform:
-    translateY(10px);
-
-  transition:
-    0.2s;
-
-  z-index: 100;
-
-  pointer-events: none;
-
-  max-width: 350px;
-
-  box-shadow:
-    0 5px 20px rgba(0, 0, 0, 0.2);
+#mixTable .mixAnyada {
+  width: 100%;
 }
 
 
-.toast.show {
-
-  opacity: 1;
-
-  transform:
-    translateY(0);
+/* ===== ANCHO COLUMNA AÑADA - DEPÓSITOS ===== */
+#bodegaTable th:nth-child(8),
+#bodegaTable td:nth-child(8) {
+  min-width: 100px;
+  width: 100px;
 }
 
-
-/* =========================================================
-   TABLET
-========================================================= */
-
-@media (max-width: 1100px) {
-
-  .topbar {
-
-    align-items: flex-start;
-
-    flex-direction: column;
-  }
-
-
-  .top-actions {
-
-    justify-content: flex-start;
-
-    width: 100%;
-  }
-
-
-  .summary {
-
-    grid-template-columns:
-      repeat(3, 1fr);
-  }
-
+#bodegaTable .b_anyada {
+  width: 100%;
 }
 
-
-/* =========================================================
-   TABLET PEQUEÑA
-========================================================= */
-
-@media (max-width: 900px) {
-
-  .detail-info {
-
-    grid-template-columns:
-      1fr 1fr;
-  }
-
-
-  .product-grid {
-
-    grid-template-columns:
-      repeat(
-        auto-fill,
-        minmax(280px, 1fr)
-      );
-  }
-
-}
-
-
-/* =========================================================
-   MÓVIL
-========================================================= */
-
-@media (max-width: 600px) {
-
-  body {
-
-    font-size: 14px;
-  }
-
-
-  .topbar {
-
-    padding: 10px;
-
-    gap: 10px;
-  }
-
-
-  .brand {
-
-    min-width: 0;
-
-    width: 100%;
-  }
-
-
-  .brand h1 {
-
-    font-size: 17px;
-  }
-
-
-  .brand small {
-
-    font-size: 11px;
-  }
-
-
-  .brand-icon {
-
-    font-size: 27px;
-  }
-
-
-  .top-actions {
-
-    display: grid;
-
-    grid-template-columns:
-      1fr 1fr;
-
-    width: 100%;
-
-    gap: 7px;
-  }
-
-
-  .top-actions .btn {
-
-    width: 100%;
-
-    text-align: center;
-
-    padding:
-      9px 6px;
-
-    font-size: 12px;
-  }
-
-
-  main {
-
-    padding:
-      10px;
-  }
-
-
-  .class-nav {
-
-    margin-inline: -10px;
-
-    padding-left: 10px;
-
-    padding-right: 10px;
-
-    padding-bottom: 10px;
-  }
-
-
-  .class-nav button {
-
-    padding:
-      8px 11px;
-
-    font-size: 12px;
-  }
-
-
-  .page-head {
-
-    align-items: stretch;
-
-    flex-direction: column;
-
-    gap: 10px;
-  }
-
-
-  .page-head h2 {
-
-    font-size: 21px;
-  }
-
-
-  .search-wrap {
-
-    min-width: 0;
-
-    width: 100%;
-  }
-
-
-  .product-grid {
-
-    grid-template-columns: 1fr;
-
-    gap: 10px;
-  }
-
-
-  .product-card {
-
-    padding: 13px;
-
-    border-radius: 12px;
-  }
-
-
-  .product-name {
-
-    font-size: 17px;
-  }
-
-
-  .stock-big {
-
-    font-size: 23px;
-  }
-
-
-  .summary {
-
-    grid-template-columns:
-      1fr 1fr;
-
-    gap: 6px;
-
-    padding: 9px;
-  }
-
-
-  .summary-item {
-
-    padding: 8px;
-  }
-
-
-  .summary-item b {
-
-    font-size: 16px;
-  }
-
-
-  .summary-item span {
-
-    font-size: 11px;
-  }
-
-
-  .detail-card {
-
-    padding: 12px;
-
-    border-radius: 12px;
-  }
-
-
-  .detail-head {
-
-    flex-direction: column;
-
-    align-items: stretch;
-  }
-
-
-  .detail-title {
-
-    font-size: 22px;
-  }
-
-
-  .detail-info {
-
-    grid-template-columns:
-      1fr 1fr;
-
-    gap: 6px;
-  }
-
-
-  .info-box {
-
-    padding: 8px;
-
-    font-size: 13px;
-  }
-
-
-  .section-head {
-
-    align-items: stretch;
-
-    flex-direction: column;
-  }
-
-
-  .section-head .btn {
-
-    width: 100%;
-  }
-
-
-  .lot-head {
-
-    align-items: stretch;
-
-    flex-direction: column;
-  }
-
-
-  .lot-head > div {
-
-    display: flex;
-
-    gap: 6px;
-  }
-
-
-  .lot-head > div .btn {
-
-    flex: 1;
-  }
-
-
-  .lot-stats {
-
-    grid-template-columns:
-      1fr 1fr;
-  }
-
-
-  .lot-actions {
-
-    display: grid;
-
-    grid-template-columns:
-      1fr 1fr;
-  }
-
-
-  .lot-actions .btn {
-
-    width: 100%;
-  }
-
-
-  .form-grid {
-
-    grid-template-columns:
-      1fr;
-  }
-
-
-  .form-grid .full {
-
-    grid-column: auto;
-  }
-
-
-  .modal {
-
-    padding: 8px;
-
-    align-items: flex-end;
-  }
-
-
-  .modal-box {
-
-    width: 100%;
-
-    max-height: 94vh;
-
-    border-radius:
-      15px 15px 8px 8px;
-  }
-
-
-  .modal-box.small {
-
-    width: 100%;
-  }
-
-
-  .modal-box form {
-
-    padding: 14px;
-  }
-
-
-  .modal-foot {
-
-    display: grid;
-
-    grid-template-columns:
-      1fr 1fr;
-
-    gap: 7px;
-  }
-
-
-  .modal-foot .btn {
-
-    width: 100%;
-  }
-
-
-  .history-actions {
-
-    width: 100%;
-  }
-
-
-  .history-actions .btn {
-
-    width: 100%;
-  }
-
-
-  .data-table {
-
-    min-width: 900px;
-  }
-
-
-  .empty {
-
-    padding:
-      30px 15px;
-  }
-
-
-  .toast {
-
-    left: 12px;
-
-    right: 12px;
-
-    bottom: 12px;
-
-    max-width: none;
-
-    text-align: center;
-  }
-
-}
-
-
-/* =========================================================
-   MÓVILES MUY PEQUEÑOS
-========================================================= */
-
-@media (max-width: 380px) {
-
-  .top-actions {
-
-    grid-template-columns:
-      1fr;
-  }
-
-
-  .summary {
-
-    grid-template-columns:
-      1fr;
-  }
-
-
-  .detail-info {
-
-    grid-template-columns:
-      1fr;
-  }
-
-
-  .lot-actions {
-
-    grid-template-columns:
-      1fr;
-  }
-
-}
-
-/* =========================================
-   COLORES BOTONES PRINCIPALES
-========================================= */
-
-/* Exportar JSON */
-#btnExportJSON {
-    background: #2878a8;
-    color: white;
-    border-color: #2878a8;
-}
-
-#btnExportJSON:hover {
-    background: #1f638c;
-}
-
-/* Exportar PDF */
-#btnExportPDF {
-    background: #b44a4a;
-    color: white;
-    border-color: #b44a4a;
-}
-
-#btnExportPDF:hover {
-    background: #943939;
-}
-
-
-/* Botón Volver */
-[data-action="back"] {
-    background: #6f6870;
-    color: white;
-    border-color: #6f6870;
-}
-
-[data-action="back"]:hover {
-    background: #514c52;
-}
-
-/* =====================================================
-   FILTROS DEL HISTORIAL
-===================================================== */
-
-.history-filters {
-
-    display: flex;
-
-    gap: 14px;
-
-    align-items: flex-end;
-
-    flex-wrap: wrap;
-
-    margin-bottom: 18px;
-
-    padding: 15px;
-
-    background: var(--card);
-
-    border: 1px solid var(--border);
-
-    border-radius: 12px;
-
-}
-
-
-.history-search {
-
-    flex: 1 1 300px;
-
-}
-
-
-.history-filter {
-
-    flex: 0 1 220px;
-
-}
-
-
-.history-filters label {
-
-    display: block;
-
-    margin-bottom: 6px;
-
-    font-size: 13px;
-
-    font-weight: 700;
-
-    color: var(--muted);
-
-}
-
-
-.history-filters input,
-.history-filters select {
-
-    width: 100%;
-
-    min-height: 42px;
-
-    padding: 9px 12px;
-
-    border: 1px solid var(--border);
-
-    border-radius: 8px;
-
-    background: #fff;
-
-    color: var(--text);
-
-    font-size: 14px;
-
-}
-
-
-.history-filters input:focus,
-.history-filters select:focus {
-
-    outline: none;
-
-    border-color: var(--primary);
-
-    box-shadow:
-        0 0 0 3px
-        rgba(123, 36, 84, 0.12);
-
-}
-
-
-@media (max-width: 700px) {
-
-    .history-filters {
-
-        flex-direction: column;
-
-        align-items: stretch;
-
-    }
-
-
-    .history-search,
-    .history-filter {
-
-        width: 100%;
-
-        flex: 1 1 auto;
-
-    }
-
-}
-
-/* ============================================================
-   CARACTERÍSTICAS EN TARJETA DE PRODUCTO
-============================================================ */
-
-.product-characteristics {
-
-    margin-top: 6px;
-    margin-bottom: 8px;
-
-    padding: 7px 9px;
-
-    background: #98f2ea;
-
-    border-left: 3px solid var(--primary);
-
-    border-radius: 6px;
-
-    color: var(--muted);
-
-    font-size: 13px;
-
-    line-height: 1.4;
-
-}
-
-/* ============================================================
-   INFORME
-============================================================ */
-
-.report-summary {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-
-    gap: 18px;
-
-    margin-bottom: 24px;
-
-}
-
-
-.report-card {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 16px;
-
-    padding: 20px;
-
-    background: #ffffff;
-
-    border: 1px solid #e3dce1;
-
-    border-radius: 12px;
-
-    box-shadow:
-        0 3px 10px rgba(0, 0, 0, 0.06);
-
-}
-
-
-.report-card-icon {
-
-    width: 52px;
-
-    height: 52px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    border-radius: 10px;
-
-    background: #f3e7ee;
-
-    font-size: 25px;
-
-}
-
-
-.report-card-label {
-
-    font-size: 13px;
-
-    color: #777;
-
-    margin-bottom: 4px;
-
-}
-
-
-.report-card-value {
-
-    font-size: 25px;
-
-    font-weight: 700;
-
-    color: #912a5c;
-
-}
-
-
-.report-card-value span {
-
-    font-size: 15px;
-
-    font-weight: 600;
-
-}
-
-
-.report-no-value {
-
-    color: #999;
-
-    font-size: 18px;
-
-}
-
-
-/* ============================================================
-   TABLA DEL INFORME
-============================================================ */
-
-#reportTable {
-
-    overflow-x: auto;
-
-}
-
-
-#reportTable .data-table th {
-
-    white-space: nowrap;
-
-}
-
-
-#reportTable .data-table td {
-
-    vertical-align: middle;
-
-}
-
-
-#reportTable .data-table td:last-child {
-
-    font-weight: 500;
-
-}
-
-
-/* ============================================================
-   MÓVIL
-============================================================ */
-
-@media (max-width: 700px) {
-
-    .report-summary {
-
-        grid-template-columns: 1fr;
-
-        gap: 12px;
-
-    }
-
-
-    .report-card {
-
-        padding: 16px;
-
-    }
-
-
-    .report-card-value {
-
-        font-size: 22px;
-
-    }
-
-}
-
-/* =========================================================
-   COLOR DE FONDO DE LAS TARJETAS SEGÚN EL STOCK
-   ========================================================= */
-
-/* Stock agotado: rojo muy suave */
-.product-card.zero {
-    background: #eeb3b3;
-}
-
-/* Stock bajo o igual al mínimo: naranja muy suave */
-.product-card.low {
-    background: #edd399;
-}
-
-/* Stock normal: fondo normal */
-.product-card {
-    transition:
-        background-color 0.25s ease,
-        box-shadow 0.25s ease;
+/* ===== ANCHO COLUMNA SO₂ LIBRE - DEPÓSITOS ===== */
+#bodegaTable th:nth-child(9),
+#bodegaTable td:nth-child(9) {
+  min-width: 100px;
+  width: 100px;
 }
