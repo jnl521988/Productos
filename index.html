@@ -1,456 +1,822 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BODEGA</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="theme-color" content="#7b2454">
+
+  <title>Stock Enológico</title>
+
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
 
-<!-- HOME -->
-<main id="homeScreen" class="screen">
-  <h1 style="text-align: center;">BODEGA</h1>
-  <div class="home-grid">
-    <button id="btnMix" class="big-btn">MEZCLAS DE VINOS</button>
-    <button id="btnMov" class="big-btn alt2">MOVIMIENTOS BODEGA</button>
-    <button id="btnBodega" class="big-btn alt2">DEPÓSITOS BODEGA</button>
-    <button id="btnMapa" class="big-btn alt2">MAPA DEPÓSITOS</button>
-    <button id="btnBarricas" class="big-btn alt2">BARRICAS</button>
-    <button id="btnSalaBarr" class="big-btn alt2">SALA BARRICAS</button>
-    <button id="btnSO2" class="big-btn alt">CORRECCIÓN SO₂</button>
-    <button id="btnProducts" class="big-btn alt2">CÁLCULOS ENÓLOGICOS</button>
-    <button id="btnNotes" class="big-btn alt2">BLOCKS DE NOTAS</button>
-  </div>
-  <div class="backup-row">
-  <button id="exportBackup">💾 EXPORTAR</button>
-  <button id="importBackup">📂 IMPORTAR</button>
-</div>
-<input type="file" id="backupFile" accept=".json" hidden>
+  <!-- =====================================================
+       CABECERA PRINCIPAL
+  ====================================================== -->
 
-</main>
+  <header class="topbar">
 
-<!-- MEZCLAS -->
-<section id="mixScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>MEZCLAS DE VINOS</h2>
-  </header>
-  <div class="card">
-    <div class="controls">
-      <button id="addMixRow" class="small">Añadir Fila</button>
-      <div class="inline-info">Total Volumen: <strong><span id="mixTotal">0</span> L</strong></div>
-    </div>
-    <table class="table" id="mixTable">
-      <thead class="thead-green">
-        <tr>
-          <th>DEPÓSITO</th>
-          <th>MEZCLA <br>(%)</th>
-          <th>VOLUMEN (L)</th>
-          <th>GRADO (%)</th>
-          <th><span style="text-transform:lowercase;">p</span>H (UD)</th>
-          <th>ACIDEZ (<span style="text-transform:lowercase;">g</span>/L)</th>
-          <th>AÑADA</th>
-          <th>CRIANZA <br> (M<span style="text-transform:lowercase;">eses</span>)</th>
-          <th>DUELAS <br> (M<span style="text-transform:lowercase;">eses</span>)</th>
-          <th>CARACTERISTICAS</th>
-          <th>ACCIÓN</th>
-        </tr>
-      </thead>
-      <tbody id="mixTableBody"></tbody>
-    </table>
+    <div class="brand">
 
-    <label class="label-green">Depósito Final</label>
-    <input id="mixFinalDeposit" type="text" placeholder="Ej: Depósito 5">
+      <span class="brand-icon">🍷</span>
 
-    <div class="actions">
-      <button id="calcMix">Calcular Mezcla</button>
-      <button id="exportMixExcel">Exportar Excel</button>
-      <button id="exportMixPDF">Exportar PDF</button>
-      <button id="saveMix" class="small">Guardar</button>
-    </div>
-
-    <div id="mixResults" class="results"></div>
-  </div>
-</section>
-
-<!-- MOVIMIENTOS BODEGA -->
-<section id="movScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>MOVIMIENTOS BODEGA</h2>
-  </header>
-
-  <div class="card">
-    <div class="controls">
-      <button id="addMovRow" class="small">Añadir Fila</button>
-      <button id="sendSelected" class="small">Enviar Selección</button>
-      <button id="deleteSelected" class="small">Eliminar Selección</button>
-      <div class="inline-info">Filas: <strong><span id="movCount">0</span></strong></div>
-      <div style="margin-left:10px"><button id="gen300" class="small">Generar hasta 400</button></div>
-    </div>
-
-    <table class="table" id="movTable">
-      <thead class="thead-green">
-        <tr>
-          <th><input id="selectAllMov" type="checkbox" title="Seleccionar todo"></th>
-          <th>Nº</th>
-          <th>Origen</th>
-          <th>Destino</th>
-          <th>Movimientos<br>(L<span style="text-transform:lowercase;">itros</span>)</th>
-          <th>Fecha</th>
-          <th>Observaciones</th>
-          <th>Estado</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody id="movTableBody"></tbody>
-    </table>
-
-    <div class="actions">
-      <button id="exportMovExcel">Exportar Excel</button>
-      <button id="exportMovPDF">Exportar PDF</button>
-      <button id="saveMov" class="small">Guardar</button>
-    </div>
-
-    <div id="movResults" class="results"></div>
-  </div>
-</section>
-
-<!-- BODEGA -->
-<section id="bodegaScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>DEPÓSITOS BODEGA</h2>
-  </header>
-
-  <div class="card">
-    <div class="controls" style="display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <button id="exportBodegaExcel"class="small">Exportar Excel</button>
-        <button id="exportBodegaPDF"class="small">Exportar PDF</button>
-        <button id="saveBodega" class="small">Guardar</button>
+        <h1>STOCK ENÓLOGICO</h1>
+        <small>Productos, lotes y movimientos</small>
       </div>
-      <div>
-        <button id="openMapaFromBodega" class="small">Ver Mapa</button>
-      </div>
+
     </div>
 
-    <table class="table" id="bodegaTable">
-      <thead class="thead-green">
-        <tr>
-          <th>DEPÓSITO</th>
-          <th>CAPACIDAD <br>(L<span style="text-transform:lowercase;">itros</span>)</th>
-          <th>VOLUMEN <br>
-            ACTUAL (L)</th>
-          <th>GRADO (%)</th>
-          <th><span style="text-transform:lowercase;">p</span>H (Ud)</th>
-          <th>ACIDEZ <br>
-            (<span style="text-transform:lowercase;">g</span>/L)</th>
-          <th>TIPO VINO</th>
-          <th>AÑADAS</th>
-          <th>SO₂ <br>
-            LIBRE</Li></th>
-          <th class="col-carac">CARACTERÍSTICAS</th>
-        </tr>
-      </thead>
-      <tbody id="bodegaTableBody"></tbody>
-    </table>
 
-    <div id="bodegaResults" class="results"></div>
-  </div>
-</section>
+    <!-- BOTONES PRINCIPALES -->
 
-<!-- MAPA DE DEPÓSITOS -->
-<section id="mapaScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>MAPA DE DEPÓSITOS</h2>
+    <div class="top-actions">
+
+      <button
+        id="btnNuevoProducto"
+        class="btn primary">
+        ＋ Nuevo Producto
+      </button>
+
+
+      <button
+        id="btnExportJSON"
+        class="btn">
+        ↓ Exportar JSON
+      </button>
+
+
+      <label class="btn file-btn">
+
+        ↑ Importar JSON
+
+        <input
+          id="inputImportJSON"
+          type="file"
+          accept=".json,application/json">
+
+      </label>
+
+
+      <button
+        id="btnExportPDF"
+        class="btn">
+        📄 Exportar PDF
+      </button>
+
+    </div>
+
   </header>
 
-  <div class="card">
-    <div class="controls" style="justify-content:space-between;align-items:center;">
-      <button id="refreshMapa" class="small">Refrescar Mapa</button>
-      <div class="inline-info">Haz clic en un depósito para ir a su fila en Bodega</div>
-    </div>
 
-    <div id="mapContainer" class="map-container" aria-live="polite"></div>
 
-    <div class="actions" style="margin-top:14px">
-      <button id="exportMapaPNG" class="small">Exportar JPG</button>
-      <button id="exportMapaPDF" class="small">Exportar PDF</button>
-    </div>
-  </div>
-</section>
+  <main>
 
-<!-- BARRICAS -->
-<section id="barricasScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>BARRICAS</h2>
-  </header>
+    <!-- =====================================================
+         NAVEGACIÓN DE CLASES
+    ====================================================== -->
 
-  <div class="card">
-    <div class="controls">
-      <button id="addBarrRow" class="small">Añadir Fila</button> 
-      <button id="vaciarBarricas" class="small">Pendiente Vaciar</button> <button id="quitarVaciarBarricas" class="small">Quitar Vaciado</button> <button id="ordenarBarricas" class="small">Ordenar por Crianza</button>
-      <div class="inline-info">TOTAL BARRICAS: <strong><span id="barrCount">0</span></strong> / TOTAL LITROS: <strong><span id="barrLitros">0</span> L</strong></div>
-      <div id="barrYearTotals"></div>
-      <div id="barrPendingTotal"></div>
-    </div>
+    <nav
+      id="classNav"
+      class="class-nav">
+    </nav>
 
-    <table class="table" id="barrTable">
-      <thead class="thead-green">
-        <tr>
-          <th></th>
-          <th>Barricas</th>
-          <th>CAPACIDAD <br>(L<span style="text-transform:lowercase;">itros</span>)</th>
-          <th>Litros <br> Barricas</th>
-          <th>Añada</th>
-          <th>Fecha Entrada</th>
-          <th>Crianza <br>(M<span style="text-transform:lowercase;">eses</span>)</th>
-          <th>Observaciones</th>
-          <th>TIPO VINO (MARCA)</th>
-          <th>COLOR</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody id="barrTableBody"></tbody>
-    </table>
 
-    <div class="actions">
-      <button id="exportBarrExcel">Exportar Excel</button>
-      <button id="exportBarrPDF">Exportar PDF</button>
-      <button id="saveBarr" class="small">Guardar</button>
-    </div>
 
-    <div id="barrResults" class="results"></div>
-  </div>
-</section>
+    <!-- =====================================================
+         VISTA DE PRODUCTOS POR CLASE
+    ====================================================== -->
 
-<!-- SALA BARRICAS (nueva) -->
-<section id="salaBarrScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>SALA DE BARRICAS</h2>
-  </header>
+    <section
+      id="viewClasses"
+      class="view">
 
-  <div class="card">
-    <div class="controls" style="gap:8px;align-items:center;">
-      <div class="sala-tabs">
-        <button class="small sala-btn" data-sala="1">Sala 1 (Principal)</button>
-        <button class="small sala-btn" data-sala="2">Sala 2 (Visitas)</button>
-        <button class="small sala-btn" data-sala="3">Sala 3 (Nave Placas)</button>
-      </div>
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-        <button id="exportSalaJPG" class="small">Exportar Sala JPG</button>
-         <button id="exportSalaPDF" class="small">Exportar Sala PDF</button>
-        <button id="clearSala" class="small">Borrar Sala</button>
-      </div>
-    </div>
 
-    <div class="sala-layout">
-      <aside class="sala-panel">
-        <h4>Panel de Barricas (arrastrar)</h4>
-        <div id="palette" class="palette"></div>
-        <div style="margin-top:10px">
-          <button id="clearCell" class="small">Vaciar Casilla</button>
-        <button id="removeOne" class="small">Quitar 1</button>
+      <div class="page-head">
+
+        <div>
+
+          <h2 id="classTitle">
+            Productos
+          </h2>
+
+          <p id="classSubtitle">
+            Selecciona una clase.
+          </p>
+
         </div>
-      </aside>
 
-     <div class="sala-main">
-      
 
-  <div id="salaInfo" class="inline-info sala-title">
-    Sala <strong id="salaNumber">1</strong>
-  </div>
+        <!-- BUSCADOR -->
 
-  <div class="sala-grid-wrap">
-  <div id="salaGrid" class="sala-grid" aria-label="Grid sala"></div>
-</div>
-<div id="panel-totales-barricas" class="card" style="margin-top:16px;text-align:center;">
-  <div id="total-sala-actual" style="font-weight:800;font-size:16px;"></div>
-  <div id="total-global" style="margin-top:6px;font-weight:800;"></div>
-</div>
+        <div class="search-wrap">
 
-</div>
+          <span>🔎</span>
 
-  </div>
-</section>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Buscar producto...">
 
-<!-- SO2 -->
-<section id="so2Screen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>CORRECCIÓN SO₂</h2>
-  </header>
+        </div>
 
-  <div class="card narrow">
-    <label class="label-green">Volumen (L)</label>
-    <input id="so2Volume" type="number" step="0.01">
-
-    <button id="useMixVolume" class="small">USAR VOLUMEN MEZCLAS</button>
-
-    <label class="label-green">SO₂ Actual (<span style="text-transform:lowercase;">mg</span>/L)</label>
-    <input id="so2Actual" type="number" step="0.01">
-
-    <label class="label-green">SO₂ Objetivo (<span style="text-transform:lowercase;">mg</span>/L)</label>
-    <input id="so2Target" type="number" step="0.01">
-
-    <label class="label-green">Porcentaje Solfosol M (%)</label>
-    <input id="so2Percent" type="number" step="0.01" value="23.8">
-
-    <div class="actions">
-      <button id="calcSO2">Calcular Sulfuroso</button>
-      <button id="exportSO2Excel">Exportar Excel</button>
-      <button id="exportSO2PDF">Exportar PDF</button>
-      <button id="saveSO2" class="small">Guardar</button>
-    </div>
-
-    <div id="so2Results" class="results"></div>
-  </div>
-</section>
-
-<!-- PRODUCTOS -->
-<section id="productsScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>PRODUCTOS ENÓLOGICOS</h2>
-  </header>
-
-  <div class="card">
-    <div class="controls">
-      <h2>CÁLCULO DE PRODUCTOS</h2>
-      <button id="addProdRow" class="small">Añadir Fila</button>
-    </div>
-    
-    <table class="table" id="prodTable">
-      <thead class="thead-green">
-        <tr>
-          <th>PRODUCTOS</th>
-          <th>Dosis (<span style="text-transform:lowercase;">g</span>/<span style="text-transform:lowercase;">h</span>L)</th>
-          <th>Litros (L)</th>
-          <th>hL</th>
-          <th>Cantidad (K<span style="text-transform:lowercase;">g o</span> L)</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody id="prodTableBody"></tbody>
-    </table>
-
-    <div class="actions">
-      <button id="exportProdExcel">Exportar Excel</button>
-      <button id="exportProdPDF">Exportar PDF</button>
-      <button id="saveProd" class="small">Guardar</button>
-    </div>
-
-    <div class="card" style="margin-top:14px">
-      <div class="controls">
-        <h2>CÁLCULO DE ÁCIDO LÁCTICO</h2>
-        <button id="addLacticRow" class="small">Añadir Fila</button>
       </div>
-      
-      <table class="table" id="acidLacticTable">
-        <thead class="thead-green">
-          <tr>
-            <th>Producto</th>
-            <th>Porcentaje <br>(%)</th>
-            <th>Acidez Actual <br>(<span style="text-transform:lowercase;">g</span>/L)</th>
-            <th>Acidez Objetivo<br>(<span style="text-transform:lowercase;">g</span>/L)</th>
-            <th>Dosis <br>(<span style="text-transform:lowercase;">g</span>/L)</th></th>
-            <th>Volumen (L)</th>
-            <th>Resultado (L)</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody id="acidLacticBody"></tbody>
-      </table>
 
-      <div class="actions">
-        <button id="exportLacticExcel">Exportar Excel</button>
-        <button id="exportLacticPDF">Exportar PDF</button>
-        <button id="saveLactic" class="small">Guardar</button>
+
+
+      <!-- TARJETAS DE PRODUCTOS -->
+
+      <div
+        id="productGrid"
+        class="product-grid">
       </div>
+
+
+
+      <!-- RESUMEN DE LA CLASE -->
+
+      <div
+        id="classSummary"
+        class="summary">
+      </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         VISTA DETALLE DEL PRODUCTO
+    ====================================================== -->
+
+    <section
+      id="viewProduct"
+      class="view hidden">
+    </section>
+
+
+
+   <!-- =====================================================
+     HISTORIAL GENERAL
+====================================================== -->
+
+<section 
+  id="viewHistory" 
+  class="view hidden">
+
+  <div class="page-head">
+
+    <div>
+
+      <h2>📋 Historial</h2>
+
+      <p>
+        Entradas y consumos de todos los productos y lotes.
+      </p>
+
     </div>
 
-    <div id="prodResults" class="results"></div>
-  </div>
-</section>
+    <div class="history-actions">
 
-<!-- BLOCKS DE NOTAS -->
-<section id="notesScreen" class="screen hidden">
-  <header class="screen-header">
-    <button class="btn-back">← Volver</button>
-    <h2>BLOCKS DE NOTAS</h2>
-  </header>
+      <button 
+        id="btnClearHistory" 
+        class="btn danger">
 
-  <div class="card">
-  <!-- Buscador de notas -->
-<div style="display:flex; gap:5px; margin-bottom:10px;">
-  <input type="text" id="searchNotes" placeholder="Buscar notas por título..." style="flex:1; padding:5px;">
-  <button id="btnSearchNotes">Buscar</button>
-</div>
+        🧹 Limpiar movimientos e historial
 
+      </button>
 
-    <!-- Editor de nota -->
-    <input type="text" id="noteTitle" placeholder="Título de la nota" style="width:100%;margin-bottom:5px;padding:5px;">
-    <textarea id="notesText" placeholder="Escribe tu nota aquí..." style="width:100%;min-height:200px;margin-bottom:10px;padding:5px;"></textarea>
-
-    <!-- Acciones -->
-    <div class="actions">
-      <button id="saveNotes">Guardar</button>
-      <button id="exportNotesPDF">Exportar PDF</button>
-      <button id="clearNotes">Borrar</button>
     </div>
 
-    <!-- Lista de notas -->
-    <div id="notesList" style="margin-top:15px;"></div>
   </div>
+
+
+  <!-- =====================================================
+       FILTROS DEL HISTORIAL
+  ====================================================== -->
+
+  <div class="history-filters">
+
+    <div class="history-search">
+
+      <label for="historySearch">
+        🔎 Buscar
+      </label>
+
+      <input
+        type="search"
+        id="historySearch"
+        placeholder="Producto, lote, descripción..."
+      >
+
+    </div>
+
+
+    <div class="history-filter">
+
+      <label for="historyTypeFilter">
+        Tipo de movimiento
+      </label>
+
+      <select id="historyTypeFilter">
+
+        <option value="todos">
+          Todos
+        </option>
+
+        <option value="entrada">
+          Entradas
+        </option>
+
+        <option value="consumo">
+          Consumos
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="history-filter">
+
+      <label for="historyClassFilter">
+        Clase
+      </label>
+
+      <select id="historyClassFilter">
+
+        <option value="todas">
+          Todas las clases
+        </option>
+
+        <option value="levadura">
+          Levadura
+        </option>
+
+        <option value="nutrición">
+          Nutrición
+        </option>
+
+        <option value="encima">
+          Encima
+        </option>
+
+        <option value="chips fermentación">
+          Chips fermentación
+        </option>
+
+        <option value="duelas">
+          Duelas
+        </option>
+
+        <option value="tanino">
+          Tanino
+        </option>
+
+        <option value="clarificante">
+          Clarificante
+        </option>
+
+        <option value="conservante">
+          Conservante
+        </option>
+
+        <option value="regulador">
+          Regulador
+        </option>
+
+        <option value="otros">
+          Otros
+        </option>
+
+      </select>
+
+    </div>
+
+  </div>
+
+
+  <!-- TABLA HISTORIAL -->
+
+  <div 
+    id="historyTable" 
+    class="table-card">
+  </div>
+
 </section>
-</body>
-</html>
 
-<!-- FIREBASE -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-  import {
-    getDatabase,
-    ref,
-    set,
-    get,
-    onValue
-  } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBZOWv4R8qlgxNwa285X0cb5w-DA0pG90w",
-    authDomain: "bodega-be3dc.firebaseapp.com",
-    databaseURL: "https://bodega-be3dc-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "bodega-be3dc",
-    storageBucket: "bodega-be3dc.firebasestorage.app",
-    messagingSenderId: "401228430964",
-    appId: "1:401228430964:web:82125be1806ce5f56cdb21"
-  };
+<!-- =====================================================
+     INFORME GENERAL DE STOCK
+====================================================== -->
 
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
+<section
+    id="viewReport"
+    class="view hidden">
 
-  // Hacer Firebase accesible desde script.js
-  window.firebaseApp = app;
-  window.firebaseDB = database;
-  window.firebaseRef = ref;
-  window.firebaseSet = set;
-  window.firebaseGet = get;
-  window.firebaseOnValue = onValue;
+    <div class="page-head">
 
-  console.log("Firebase conectado correctamente.");
+        <div>
+
+            <h2>📊 Informe</h2>
+
+            <p>
+                Resumen general del stock enológico y rendimiento de uva.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         RESUMEN GENERAL
+    ================================================== -->
+
+    <div
+        id="reportSummary"
+        class="report-summary">
+    </div>
+
+
+    <!-- =================================================
+         TABLA POR CLASES
+    ================================================== -->
+
+    <div
+        id="reportTable"
+        class="table-card">
+    </div>
+
+</section>
+
+
+  <!-- =====================================================
+       MODAL NUEVO / EDITAR PRODUCTO
+  ====================================================== -->
+
+  <div
+    id="modal"
+    class="modal hidden">
+
+
+    <div class="modal-box">
+
+
+      <div class="modal-head">
+
+        <h3 id="modalTitle">
+          Nuevo Producto
+        </h3>
+
+
+        <button
+          class="icon-btn"
+          data-close-modal>
+          ×
+        </button>
+
+      </div>
+
+
+
+      <form id="productForm">
+
+
+        <input
+          type="hidden"
+          id="productId">
+
+
+
+        <div class="form-grid">
+
+
+          <!-- NOMBRE -->
+
+          <label>
+
+            Nombre
+
+            <input
+              id="fNombre"
+              required>
+
+          </label>
+
+
+
+          <!-- PROVEEDOR -->
+
+          <label>
+
+            Proveedor
+
+            <select
+              id="fProveedor"
+              required>
+            </select>
+
+          </label>
+
+
+
+          <!-- CLASE -->
+
+          <label>
+
+            Clase
+
+            <select
+              id="fClase"
+              required>
+            </select>
+
+          </label>
+
+
+
+          <!-- UNIDAD -->
+
+          <label>
+
+            Unidad
+
+            <select
+              id="fUnidad"
+              required>
+            </select>
+
+          </label>
+
+
+
+          <!-- DOSIS -->
+
+          <label>
+
+            Dosis Recomendada
+
+            <input
+              id="fDosis"
+              placeholder="Ej.: 20–40 g/hL">
+
+          </label>
+
+
+
+          <!-- AVISO BAJO STOCK -->
+
+          <label>
+
+            Aviso de Bajo Stock
+
+            <input
+              id="fBajoStock"
+              type="number"
+              min="0"
+              step="any"
+              value="0">
+
+          </label>
+
+
+
+          <!-- CARACTERÍSTICAS -->
+
+          <label class="full">
+
+            Características
+
+            <textarea
+              id="fCaracteristicas"
+              rows="4">
+            </textarea>
+
+          </label>
+
+        </div>
+
+
+
+        <!-- BOTONES -->
+
+        <div class="modal-foot">
+
+          <button
+            type="button"
+            class="btn"
+            data-close-modal>
+
+            Cancelar
+
+          </button>
+
+
+          <button
+            type="submit"
+            class="btn primary">
+
+            Guardar Producto
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- =====================================================
+       MODAL NUEVO / EDITAR LOTE
+  ====================================================== -->
+
+  <div
+    id="lotModal"
+    class="modal hidden">
+
+
+    <div class="modal-box small">
+
+
+      <div class="modal-head">
+
+        <h3 id="lotModalTitle">
+          Nuevo Lote
+        </h3>
+
+
+        <button
+          class="icon-btn"
+          data-close-lot-modal>
+
+          ×
+
+        </button>
+
+      </div>
+
+
+
+      <form id="lotForm">
+
+
+        <input
+          type="hidden"
+          id="lotProductId">
+
+
+        <input
+          type="hidden"
+          id="lotId">
+
+
+
+        <!-- NOMBRE / NÚMERO DEL LOTE -->
+
+        <label>
+
+          Número / identificación del lote
+
+          <input
+            id="lotNombre"
+            required>
+
+        </label>
+
+
+
+        <!-- CANTIDAD INICIAL -->
+
+        <label>
+
+          Cantidad Inicial
+
+          <input
+            id="lotCantidad"
+            type="number"
+            min="0"
+            step="any"
+            required>
+
+        </label>
+
+
+
+        <div class="modal-foot">
+
+          <button
+            type="button"
+            class="btn"
+            data-close-lot-modal>
+
+            Cancelar
+
+          </button>
+
+
+          <button
+            class="btn primary"
+            type="submit">
+
+            Guardar Lote
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- =====================================================
+       MODAL ENTRADA / CONSUMO
+  ====================================================== -->
+
+  <div
+    id="movementModal"
+    class="modal hidden">
+
+
+    <div class="modal-box small">
+
+
+      <div class="modal-head">
+
+        <h3 id="movementModalTitle">
+          Movimiento
+        </h3>
+
+
+        <button
+          class="icon-btn"
+          data-close-movement-modal>
+
+          ×
+
+        </button>
+
+      </div>
+
+
+
+      <form id="movementForm">
+
+
+        <input
+          type="hidden"
+          id="movementId">
+
+
+        <input
+          type="hidden"
+          id="movementProductId">
+
+
+        <input
+          type="hidden"
+          id="movementLotId">
+
+
+
+        <!-- TIPO -->
+
+        <label>
+
+          Tipo
+
+          <select id="movementTipo">
+
+            <option value="entrada">
+              Entrada
+            </option>
+
+            <option value="consumo">
+              Consumo
+            </option>
+
+          </select>
+
+        </label>
+
+
+
+        <!-- CANTIDAD -->
+
+        <label>
+
+          Cantidad
+
+          <input
+            id="movementCantidad"
+            type="number"
+            min="0.000001"
+            step="any"
+            required>
+
+        </label>
+
+
+
+        <!-- FECHA -->
+
+        <label>
+
+          Fecha
+
+          <input
+            id="movementFecha"
+            type="date"
+            required>
+
+        </label>
+
+
+
+        <!-- DESCRIPCIÓN -->
+
+        <label>
+
+          Descripción / Observaciones
+
+          <textarea
+            id="movementDescripcion"
+            rows="3">
+          </textarea>
+
+        </label>
+
+
+
+        <div class="modal-foot">
+
+          <button
+            type="button"
+            class="btn"
+            data-close-movement-modal>
+
+            Cancelar
+
+          </button>
+
+
+          <button
+            class="btn primary"
+            type="submit">
+
+            Guardar Movimiento
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- =====================================================
+       AVISOS
+  ====================================================== -->
+
+  <div
+    id="toast"
+    class="toast">
+  </div>
+
+
+
+<!-- =====================================================
+     LIBRERÍAS PDF
+====================================================== -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js">
 </script>
 
-<script src="script.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<!-- jsPDF librería -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js">
+</script>
+
+
+  <!-- =====================================================
+       JAVASCRIPT DEL PROGRAMA
+  ====================================================== -->
+
+  <script src="script.js"></script>
+
+</body>
+</html>
