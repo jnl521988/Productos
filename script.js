@@ -3069,30 +3069,39 @@ function mostrarInforme() {
             lotes.length;
 
 
-        // ====================================================
-        // STOCK DE CADA LOTE
-        // ====================================================
+       // ====================================================
+// STOCK DE CADA LOTE
+// ====================================================
 
-        lotes.forEach(function (l) {
+lotes.forEach(function (l) {
 
-            const stock =
-                Number(
-                    stockLote(
-                        p.id,
-                        l.id
-                    )
-                ) || 0;
-
-
-            // Todo el stock enológico se considera Kg
-            resumenClases[clase].stockKg +=
-                stock;
+    const stock =
+        Number(
+            stockLote(
+                p.id,
+                l.id
+            )
+        ) || 0;
 
 
-            stockTotalKg +=
-                stock;
+    // Las duelas se contabilizan como unidades
+    if (clase === "duelas") {
 
-        });
+        resumenClases[clase].stockKg +=
+            stock;
+
+    } else {
+
+        resumenClases[clase].stockKg +=
+            stock;
+
+    }
+
+
+    stockTotalKg +=
+        stock;
+
+});
 
     });
 
@@ -3420,9 +3429,9 @@ else if (
                     </td>
 
                     <td>
-                        ${formatoNumero(stock)}
-                        Kg
-                    </td>
+    ${formatoNumero(stock)}
+    ${clase === "duelas" ? "Ud." : "Kg"}
+</td>
 
                     <td>
 
